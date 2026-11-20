@@ -183,7 +183,8 @@ local function PlacePlate(row)
     local db = BFA.db
     if not badges.plate:IsShown() then return nil end
     row:ClearAllPoints()
-    row:SetPoint("BOTTOMLEFT", badges.plate, "TOPLEFT", db.rowX, 3)
+    -- Centered above the badge; the 12 px keep the count text (under each icon) clear of the badge.
+    row:SetPoint("BOTTOM", badges.plate, "TOP", 0, 12)
     return "plate badge"
 end
 

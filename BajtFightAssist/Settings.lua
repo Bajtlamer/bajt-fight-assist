@@ -77,7 +77,7 @@ SlashCmdList["BAJTFIGHTASSIST"] = function(msg)
             db.rowX, db.rowY = tonumber(x), tonumber(y)
             BFA:Say(string.format("Indicator row offset: %s, %s", x, y))
         else
-            BFA:Say(string.format("Indicator row offset is %s, %s. Usage: /bfa row X Y (X right, Y up; default 24 -3)",
+            BFA:Say(string.format("Indicator row offset is %s, %s. Usage: /bfa row X Y (X right, Y up; default 4 -3, aligned with the range icon)",
                 tostring(db.rowX), tostring(db.rowY)))
         end
     elseif cmd == "modules" then

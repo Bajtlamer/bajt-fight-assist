@@ -29,7 +29,7 @@ BFA.DEFAULTS = {
     log = true,
     inBattleground = true,
     locked = true,
-    rowX = 24,           -- indicator row offset from the badge (to the right), see /bfa row
+    rowX = 4,            -- indicator row offset from the badge (to the right), see /bfa row. 4 = under the range icon
     rowY = -3,
     point = { "CENTER", "UIParent", "CENTER", 0, -150 },
 }
@@ -86,6 +86,11 @@ function BFA.OnEvent(event, arg1)
             if db[k] == nil then
                 if type(v) == "table" then db[k] = { unpack(v) } else db[k] = v end
             end
+        end
+        -- Layout version 2: the row is aligned with the range icon (default rowX 4, was 24). Older saved offsets are replaced.
+        if (db.layout or 0) < 2 then
+            db.rowX, db.rowY = BFA.DEFAULTS.rowX, BFA.DEFAULTS.rowY
+            db.layout = 2
         end
         db.modules = db.modules or {}
         db.roleModules = db.roleModules or {}
