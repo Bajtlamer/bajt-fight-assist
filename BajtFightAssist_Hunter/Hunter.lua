@@ -121,51 +121,146 @@ local function AmmoUpdate()
 end
 
 ---------------------------------------------------------------------------
--- Hunter's Mark on the target
+-- Tracking from your own casts. During combat the client hides auras from addons, so the state of Hunter's Mark
+-- and of the aspect is kept from what was seen when auras were readable and from your own successful casts.
+-- trackedMarks[guid] = { marked = bool, at = time, expires = time|nil, src = "cast"|"seen"|"expired" }
+-- trackedAspect = { name, icon, src } (an aspect), false (seen: none) or nil (never observed: unknown)
 ---------------------------------------------------------------------------
 local MARK = 1130
-local function MarkUpdate(unit)
-    if not Known(MARK) then return nil end
-    local markName, markIcon = SpellNameIcon(MARK)
-    if not markName then return nil end
-    local readable, name, icon, duration, expires, source = FindAura(unit, "HARMFUL", function(n) return n == markName end)
-    if not readable then return nil end -- auras hidden by the client (combat): unknown
-    if not name then
-        return "warn", markIcon, nil, "Hunter's Mark is not on the target"
-    end
-    LogChange("mark", string.format("duration=%s expires=%s source=%s", tostring(duration), tostring(expires), tostring(source)))
-    local text
-    -- Classic often reports no duration for other units: show a time only when the client gives one.
-    local okT, shown = pcall(function()
-        if duration and duration > 0 and expires and expires > 0 then
-            local left = math.max(0, math.floor(expires - GetTime() + 0.5))
-            return string.format("%d:%02d", math.floor(left / 60), left % 60)
-        end
-    end)
-    if okT then text = shown end
-    return "ok", icon or markIcon, text, "Hunter's Mark is on the target"
+local ASPECT_IDS = { 13165, 13163, 5118, 13161, 20043, 13159 } -- Hawk, Monkey, Cheetah, Beast, Wild, Pack
+local trackedMarks = {}
+local trackedAspect
+
+local function TargetGuid(unit)
+    local ok, g = Try(UnitGUID, unit)
+    return ok and g or nil
 end
 
----------------------------------------------------------------------------
--- Aspect
----------------------------------------------------------------------------
-local ASPECT_IDS = { 13165, 13163, 5118, 13161, 20043, 13159 } -- Hawk, Monkey, Cheetah, Beast, Wild, Pack
-local function AspectUpdate()
-    if not Known(13165) then return nil end -- no aspects learned yet
+local function MarkName()
+    return (SpellNameIcon(MARK))
+end
+
+local function AspectNames()
     local names = {}
     for _, id in ipairs(ASPECT_IDS) do
         local n = SpellNameIcon(id)
         if n then names[n] = true end
     end
-    local readable, name, icon = FindAura("player", "HELPFUL", function(n) return names[n] end)
-    if not readable then return nil end
-    if name then
-        LogChange("aspect", name)
-        return "ok", icon, nil, name
+    return names
+end
+
+local function Prune(now)
+    local n = 0
+    for _ in pairs(trackedMarks) do n = n + 1 end
+    if n < 60 then return end
+    for guid, t in pairs(trackedMarks) do
+        if t.expires and now > t.expires + 60 then trackedMarks[guid] = nil end
     end
-    LogChange("aspect", "none")
+end
+
+-- Called for every successful cast of the player.
+local function OnCast(spellID)
+    local name, icon = SpellNameIcon(spellID)
+    if not name then return end
+    local now = GetTime()
+    if name == MarkName() then
+        local guid = TargetGuid("target")
+        local db = BFA.modules.Hunter.db
+        Log(string.format("cast Hunter's Mark spell=%s guid=%s", tostring(spellID), tostring(guid)))
+        if guid then
+            Prune(now)
+            trackedMarks[guid] = { marked = true, at = now, expires = now + db.markDuration, src = "cast" }
+        end
+    elseif AspectNames()[name] then
+        Log(string.format("cast aspect %s spell=%s", name, tostring(spellID)))
+        trackedAspect = { name = name, icon = icon, src = "cast" }
+    end
+end
+
+---------------------------------------------------------------------------
+-- Hunter's Mark on the target
+---------------------------------------------------------------------------
+local function MarkUpdate(unit)
+    if not Known(MARK) then return nil end
+    local markName, markIcon = SpellNameIcon(MARK)
+    if not markName then return nil end
+    local now = GetTime()
+    local guid = TargetGuid(unit)
+    local readable, name, icon, duration, expires, source = FindAura(unit, "HARMFUL", function(n) return n == markName end)
+
+    if readable then
+        -- The auras can be read: this is the truth, and it also corrects the tracked state.
+        local t = guid and trackedMarks[guid]
+        if name then
+            if guid and not (t and t.marked) then
+                trackedMarks[guid] = { marked = true, at = now, expires = now + BFA.modules.Hunter.db.markDuration, src = "seen" }
+            end
+        elseif guid then
+            if t and t.marked and t.src == "cast" and now - t.at > 2 then
+                -- Learning the real duration: the aura is gone although the tracking thought it was still on.
+                Log(string.format("mark gone %.0f s after the cast (tracked duration %s s)", now - t.at,
+                    tostring(BFA.modules.Hunter.db.markDuration)))
+            end
+            if not (t and t.marked and now - t.at <= 2) then -- right after a cast the aura may not show yet
+                trackedMarks[guid] = { marked = false, at = now, src = "seen" }
+            end
+        end
+        if not name then
+            if guid and trackedMarks[guid] and trackedMarks[guid].marked then
+                return "ok", markIcon, nil, "Hunter's Mark was just cast on the target"
+            end
+            return "warn", markIcon, nil, "Hunter's Mark is not on the target"
+        end
+        LogChange("mark", string.format("duration=%s expires=%s source=%s", tostring(duration), tostring(expires), tostring(source)))
+        local text
+        -- Classic often reports no duration for other units: show a time only when the client gives one.
+        local okT, shown = pcall(function()
+            if duration and duration > 0 and expires and expires > 0 then
+                local left = math.max(0, math.floor(expires - GetTime() + 0.5))
+                return string.format("%d:%02d", math.floor(left / 60), left % 60)
+            end
+        end)
+        if okT then text = shown end
+        return "ok", icon or markIcon, text, "Hunter's Mark is on the target"
+    end
+
+    -- Auras are hidden (combat): fall back to what was seen or cast for this very target.
+    local t = guid and trackedMarks[guid]
+    if not t then return nil end
+    if t.marked and t.expires and now >= t.expires then
+        trackedMarks[guid] = { marked = false, at = now, src = "expired" }
+        t = trackedMarks[guid]
+    end
+    LogChange("mark", "tracked marked=" .. tostring(t.marked) .. " src=" .. t.src)
+    if t.marked then
+        return "ok", markIcon, nil, "Hunter's Mark (tracked from your cast)"
+    end
+    return "warn", markIcon, nil, "No Hunter's Mark (tracked, auras are hidden in combat)"
+end
+
+---------------------------------------------------------------------------
+-- Aspect
+---------------------------------------------------------------------------
+local function AspectUpdate()
+    if not Known(13165) then return nil end -- no aspects learned yet
+    local names = AspectNames()
     local _, hawkIcon = SpellNameIcon(13165)
-    return "warn", hawkIcon, "!", "No aspect active"
+    local readable, name, icon = FindAura("player", "HELPFUL", function(n) return names[n] end)
+    if readable then
+        trackedAspect = name and { name = name, icon = icon, src = "seen" } or false
+        LogChange("aspect", name or "none")
+        if name then return "ok", icon, nil, name end
+        return "warn", hawkIcon, "!", "No aspect active"
+    end
+    -- hidden in combat: what we last saw or cast
+    if trackedAspect then
+        LogChange("aspect", "tracked " .. trackedAspect.name .. " src=" .. trackedAspect.src)
+        return "ok", trackedAspect.icon, nil, trackedAspect.name .. " (tracked)"
+    elseif trackedAspect == false then
+        LogChange("aspect", "tracked none")
+        return "warn", hawkIcon, "!", "No aspect active (tracked, auras are hidden in combat)"
+    end
+    return nil
 end
 
 ---------------------------------------------------------------------------
@@ -196,9 +291,33 @@ local function PetUpdate()
     return state, icon, hp and (hp .. "%") or nil, tip
 end
 
+local function ResetTracking()
+    trackedMarks = {}
+    trackedAspect = nil
+end
+
+local function OnEvent(event, unit, castGUID, spellID)
+    if event == "UNIT_SPELLCAST_SUCCEEDED" then
+        OnCast(spellID)
+    elseif event == "PLAYER_DEAD" or event == "PLAYER_ENTERING_WORLD" then
+        trackedAspect = nil -- death and loading screens remove buffs
+    end
+end
+
+local events = CreateFrame("Frame")
+if events.RegisterUnitEvent then events:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player") end
+events:RegisterEvent("PLAYER_DEAD")
+events:RegisterEvent("PLAYER_ENTERING_WORLD")
+events:SetScript("OnEvent", function(_, event, unit, castGUID, spellID)
+    local ok, err = pcall(OnEvent, event, unit, castGUID, spellID)
+    if not ok then Log("event error: " .. tostring(err)) end
+end)
+
 BFA:RegisterModule("Hunter", {
+    OnEvent = OnEvent,           -- exposed for the offline tests
+    ResetTracking = ResetTracking,
     apiVersion = 1,
-    defaults = { ammoWarn = 200, ammoBad = 50 },
+    defaults = { ammoWarn = 200, ammoBad = 50, markDuration = 120 },
     -- Spell probes for range. primary = the attack the state is judged against (first known wins).
     -- Melee spells are deliberately not probed: their range check reported "in range" at any distance on this client.
     ranged = {

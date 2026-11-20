@@ -11,11 +11,15 @@ SlashCmdList = {}
 DEFAULT_CHAT_FRAME = { AddMessage = function() end }
 wipe = function(t) for k in pairs(t) do t[k] = nil end end
 date = os.date
-GetTime = function() return 1000 end
+local NOW = 1000
+GetTime = function() return NOW end
 
 -- World ------------------------------------------------------------------------
 local W
+BFA_MODULE = nil
 local function reset()
+    NOW, GUID = 1000, "G1"
+    if BFA_MODULE and BFA_MODULE.ResetTracking then BFA_MODULE.ResetTracking() end
     W = { known = { [1130] = true, [13165] = true, [883] = true }, inv = {}, invCount = {}, itemCount = {},
           buffs = {}, debuffs = {}, pet = nil }
 end
@@ -24,7 +28,10 @@ local ITEMS = {
     bow = { "i", 2, 2 }, gun = { "i", 2, 3 }, xbow = { "i", 2, 18 }, wand = { "i", 2, 19 }, unknownWeapon = nil,
     arrow = { "arrowicon", 6, 2 }, bullet = { "bulleticon", 6, 3 },
 }
-local SPELLS = { [1130] = "Hunter's Mark", [13165] = "Aspect of the Hawk", [883] = "Call Pet" }
+local SPELLS = { [1130] = "Hunter's Mark", [14323] = "Hunter's Mark", [13165] = "Aspect of the Hawk",
+    [5118] = "Aspect of the Cheetah", [883] = "Call Pet", [75] = "Auto Shot" }
+local GUID = "G1"
+function UnitGUID() return GUID end
 function IsPlayerSpell(id) return W.known[id] or false end
 function GetSpellInfo(id) local n = SPELLS[id] if not n then return nil end return n, nil, "icon" .. id end
 function GetInventoryItemID(_, slot) return W.inv[slot] end
@@ -71,6 +78,7 @@ load(root .. "/BajtFightAssist/Range.lua", "BajtFightAssist", BFA)
 BFA.OnEvent("ADDON_LOADED", "BajtFightAssist")
 load(root .. "/BajtFightAssist_Hunter/Hunter.lua", "BajtFightAssist_Hunter", {})
 
+BFA_MODULE = BFA.modules.Hunter
 local ind = {}
 for _, e in ipairs(BFA.indicators) do ind[e.def.id] = e.def.Update end
 
@@ -124,6 +132,38 @@ reset(); W.pet = { hp = 20, max = 100, happy = 3 }; expect("pet: low health", "p
 reset(); W.pet = { hp = 100, max = 100, happy = 1 }; expect("pet: unhappy", "pet", "bad", "100%")
 reset(); W.pet = { hp = 50, max = 100 }; expect("pet: happiness unknown still shown", "pet", "ok", "50%")
 reset(); W.pet = { hp = SECRET, max = SECRET, happy = 3 }; expect("pet: secret health, alive without percentage", "pet", "ok", nil)
+
+
+-- Tracking from your own casts (auras are hidden in combat) ---------------------------------------------------
+local function cast(id) BFA_MODULE.OnEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "cg", id) end
+local function peek(id) local st, _, tx, tip = ind[id]("target") return st, tx, tip end
+local function expectState(name, id, state)
+    local st = peek(id)
+    local ok = st == state
+    print((ok and "PASS " or "FAIL ") .. name .. " -> " .. tostring(st) .. (ok and "" or ("   expected " .. tostring(state))))
+    if not ok then fails = fails + 1 end
+end
+
+reset(); W.aurasHidden = true; expectState("track: never observed, hidden in combat", "mark", nil)
+reset(); expectState("track: absent seen out of combat", "mark", "warn")
+W.aurasHidden = true; expectState("track: absent seen, then combat: still warn", "mark", "warn")
+cast(1130); expectState("track: cast in combat marks the target", "mark", "ok")
+GUID = "G2"; expectState("track: another target is unknown", "mark", nil)
+GUID = "G1"; expectState("track: back on the marked target", "mark", "ok")
+NOW = 1000 + 121; expectState("track: mark expires after the tracked duration", "mark", "warn")
+reset(); W.debuffs = { { name = "Hunter's Mark" } }; expectState("track: mark seen on target", "mark", "ok")
+W.aurasHidden = true; expectState("track: seen mark stays after combat starts", "mark", "ok")
+reset(); expectState("track: absent seen", "mark", "warn")
+cast(14323); expectState("track: cast of a higher rank counts", "mark", "ok")
+NOW = 1001; expectState("track: aura not visible yet right after the cast", "mark", "ok")
+NOW = 1010; expectState("track: aura still missing 10 s later corrects the tracking", "mark", "warn")
+reset(); GUID = SECRET; W.aurasHidden = true; expectState("track: secret guid is unknown", "mark", nil)
+
+reset(); expectState("track: aspect none seen", "aspect", "warn")
+W.aurasHidden = true; cast(5118); expectState("track: aspect cast in combat", "aspect", "ok")
+BFA_MODULE.OnEvent("PLAYER_DEAD"); expectState("track: death clears the tracked aspect", "aspect", nil)
+reset(); W.buffs = { { name = "Aspect of the Hawk" } }; expectState("track: aspect seen", "aspect", "ok")
+W.aurasHidden = true; expectState("track: seen aspect stays in combat", "aspect", "ok")
 
 -- Smoke test of the display code with stub frames: must not raise errors.
 load(root .. "/BajtFightAssist/UI.lua", "BajtFightAssist", BFA)
