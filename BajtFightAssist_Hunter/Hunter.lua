@@ -15,6 +15,20 @@ end
 ---------------------------------------------------------------------------
 -- API helpers (Classic and newer clients)
 ---------------------------------------------------------------------------
+-- During combat the client hides some values from addons ("secret values"). A secret value is unknown to us.
+local function Readable(v)
+    if v ~= nil and issecretvalue and issecretvalue(v) then return nil end
+    return v
+end
+
+-- Calls fn; returns ok, results. Not ok when the call raised an error (for example secret aura data).
+local function Try(fn, ...)
+    local r = { pcall(fn, ...) }
+    if not r[1] then return false end
+    for i = 2, #r do r[i] = Readable(r[i]) end
+    return true, unpack(r, 2)
+end
+
 local function Known(id)
     return (IsPlayerSpell and IsPlayerSpell(id)) or (IsSpellKnown and IsSpellKnown(id)) or false
 end
@@ -39,7 +53,7 @@ local function ItemInfo(id)
 end
 
 -- Returns name, icon, duration, expirationTime, source of aura number index, or nil at the end of the list.
-local function Aura(unit, index, filter)
+local function RawAura(unit, index, filter)
     if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
         local a = C_UnitAuras.GetAuraDataByIndex(unit, index, filter)
         if not a then return nil end
@@ -50,12 +64,21 @@ local function Aura(unit, index, filter)
     return name, icon, duration, expirationTime, source
 end
 
+-- Returns readable, name, icon, duration, expirationTime, source. readable is false when the client hides
+-- the auras (combat restrictions): then nothing is known. name is nil when the aura is simply not there.
 local function FindAura(unit, filter, wanted)
     for i = 1, 40 do
-        local name, icon, duration, expirationTime, source = Aura(unit, i, filter)
-        if not name then return nil end
-        if wanted(name) then return name, icon, duration, expirationTime, source end
+        local ok, name, icon, duration, expirationTime, source = Try(RawAura, unit, i, filter)
+        if not ok then return false end
+        if name == nil then
+            -- end of the list, or a secret name: only the end of the list proves the aura is absent
+            local ok2, probe = pcall(RawAura, unit, i, filter)
+            if ok2 and probe == nil then return true end
+            return false
+        end
+        if wanted(name) then return true, name, icon, duration, expirationTime, source end
     end
+    return true
 end
 
 local function Short(n)
@@ -105,17 +128,21 @@ local function MarkUpdate(unit)
     if not Known(MARK) then return nil end
     local markName, markIcon = SpellNameIcon(MARK)
     if not markName then return nil end
-    local name, icon, duration, expires, source = FindAura(unit, "HARMFUL", function(n) return n == markName end)
+    local readable, name, icon, duration, expires, source = FindAura(unit, "HARMFUL", function(n) return n == markName end)
+    if not readable then return nil end -- auras hidden by the client (combat): unknown
     if not name then
         return "warn", markIcon, nil, "Hunter's Mark is not on the target"
     end
     LogChange("mark", string.format("duration=%s expires=%s source=%s", tostring(duration), tostring(expires), tostring(source)))
     local text
     -- Classic often reports no duration for other units: show a time only when the client gives one.
-    if duration and duration > 0 and expires and expires > 0 then
-        local left = math.max(0, math.floor(expires - GetTime() + 0.5))
-        text = string.format("%d:%02d", math.floor(left / 60), left % 60)
-    end
+    local okT, shown = pcall(function()
+        if duration and duration > 0 and expires and expires > 0 then
+            local left = math.max(0, math.floor(expires - GetTime() + 0.5))
+            return string.format("%d:%02d", math.floor(left / 60), left % 60)
+        end
+    end)
+    if okT then text = shown end
     return "ok", icon or markIcon, text, "Hunter's Mark is on the target"
 end
 
@@ -130,7 +157,8 @@ local function AspectUpdate()
         local n = SpellNameIcon(id)
         if n then names[n] = true end
     end
-    local name, icon = FindAura("player", "HELPFUL", function(n) return names[n] end)
+    local readable, name, icon = FindAura("player", "HELPFUL", function(n) return names[n] end)
+    if not readable then return nil end
     if name then
         LogChange("aspect", name)
         return "ok", icon, nil, name
@@ -155,9 +183,12 @@ local function PetUpdate()
         LogChange("pet", "dead")
         return "bad", icon, "X", "Pet is dead"
     end
-    local happy = GetPetHappiness and GetPetHappiness()
-    local maxHp = UnitHealthMax("pet")
-    local hp = maxHp and maxHp > 0 and math.floor(UnitHealth("pet") / maxHp * 100 + 0.5) or nil
+    local _, happy = Try(function() return GetPetHappiness and GetPetHappiness() end)
+    -- health is secret during combat (arithmetic on it raises an error): then no percentage, but the pet is alive
+    local _, hp = Try(function()
+        local cur, maxHp = UnitHealth("pet"), UnitHealthMax("pet")
+        if maxHp > 0 then return math.floor(cur / maxHp * 100 + 0.5) end
+    end)
     LogChange("pet", string.format("alive hp=%s happiness=%s", tostring(hp), tostring(happy)))
     if happy == 1 then return "bad", icon, hp and (hp .. "%") or nil, "Pet is unhappy" end
     local state = (hp and hp < 30) and "warn" or "ok"

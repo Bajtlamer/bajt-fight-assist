@@ -36,14 +36,31 @@ local function aura(list, i)
     if not a then return nil end
     return a.name, a.icon or "auraicon", 1, "magic", a.duration or 0, a.expires or 0, a.source
 end
-function UnitBuff(_, i) return aura(W.buffs, i) end
-function UnitDebuff(_, i) return aura(W.debuffs, i) end
+function UnitBuff(_, i)
+    if W.aurasHidden then error("Auras cannot be accessed when secret while tainted") end
+    return aura(W.buffs, i)
+end
+function UnitDebuff(_, i)
+    if W.aurasHidden then error("Auras cannot be accessed when secret while tainted") end
+    return aura(W.debuffs, i)
+end
 function UnitExists(u) return u ~= "pet" or W.pet ~= nil end
 function UnitIsDead() return W.pet and W.pet.dead or false end
 function UnitHealth() return W.pet and W.pet.hp or 0 end
 function UnitHealthMax() return W.pet and W.pet.max or 0 end
 function UnitName() return "Boar" end
 function GetPetHappiness() return W.pet and W.pet.happy end
+
+-- Secret values: any arithmetic or comparison raises an error, like the client does during combat.
+local SECRET = setmetatable({}, {
+    __add = function() error("attempt to perform arithmetic on a secret number value") end,
+    __sub = function() error("attempt to perform arithmetic on a secret number value") end,
+    __mul = function() error("attempt to perform arithmetic on a secret number value") end,
+    __div = function() error("attempt to perform arithmetic on a secret number value") end,
+    __lt = function() error("attempt to compare a secret number value") end,
+    __le = function() error("attempt to compare a secret number value") end,
+})
+function issecretvalue(v) return v == SECRET end
 
 -- Load -----------------------------------------------------------------------------
 local BFA = {}
@@ -86,10 +103,17 @@ reset(); W.debuffs = { { name = "Hunter's Mark" } }; expect("mark: present, no d
 reset(); W.debuffs = { { name = "Sunder Armor" }, { name = "Hunter's Mark", duration = 120, expires = 1102 } }
 expect("mark: present with remaining time", "mark", "ok", "1:42")
 
+reset(); W.aurasHidden = true; expect("mark: auras hidden in combat", "mark", nil, nil)
+reset(); W.debuffs = { { name = "Hunter's Mark", duration = SECRET, expires = SECRET } }
+expect("mark: present, time is secret", "mark", "ok", nil)
+reset(); W.debuffs = { { name = SECRET } }; expect("mark: secret aura name is unknown", "mark", nil, nil)
+
 -- Aspect ----------------------------------------------------------------------------------------
 reset(); W.known[13165] = false; expect("aspect: none learned", "aspect", nil, nil)
 reset(); expect("aspect: none active", "aspect", "warn", "!")
 reset(); W.buffs = { { name = "Mark of the Wild" }, { name = "Aspect of the Hawk" } }; expect("aspect: hawk active", "aspect", "ok", nil)
+
+reset(); W.aurasHidden = true; expect("aspect: auras hidden in combat", "aspect", nil, nil)
 
 -- Pet ---------------------------------------------------------------------------------------------
 reset(); W.known[883] = false; expect("pet: no Call Pet", "pet", nil, nil)
@@ -99,6 +123,7 @@ reset(); W.pet = { hp = 100, max = 100, happy = 3 }; expect("pet: healthy", "pet
 reset(); W.pet = { hp = 20, max = 100, happy = 3 }; expect("pet: low health", "pet", "warn", "20%")
 reset(); W.pet = { hp = 100, max = 100, happy = 1 }; expect("pet: unhappy", "pet", "bad", "100%")
 reset(); W.pet = { hp = 50, max = 100 }; expect("pet: happiness unknown still shown", "pet", "ok", "50%")
+reset(); W.pet = { hp = SECRET, max = SECRET, happy = 3 }; expect("pet: secret health, alive without percentage", "pet", "ok", nil)
 
 -- Smoke test of the display code with stub frames: must not raise errors.
 load(root .. "/BajtFightAssist/UI.lua", "BajtFightAssist", BFA)

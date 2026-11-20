@@ -101,6 +101,13 @@ function BFA.OnEvent(event, arg1)
             BFA:Log("Core", "MIGRATE settings imported from TargetRangerDB")
         end
         BFA:Log("Core", "LOGIN core " .. BFA.version .. " api " .. BFA.API_VERSION)
+        local names = {}
+        if type(C_Secrets) == "table" then
+            for k, v in pairs(C_Secrets) do if type(v) == "function" then names[#names + 1] = k end end
+            table.sort(names)
+        end
+        BFA:Log("Core", string.format("secret values api: issecretvalue=%s C_Secrets=%s [%s]", type(issecretvalue),
+            type(C_Secrets), table.concat(names, ",")))
         for _, fn in ipairs(loginHooks) do
             local ok, err = pcall(fn)
             if not ok then BFA:Log("Core", "login hook error: " .. tostring(err)) end

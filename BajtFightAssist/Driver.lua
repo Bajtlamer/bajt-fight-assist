@@ -12,7 +12,7 @@ local TEST = {
 }
 local indAcc = 0
 local indLast = {}   -- indicator key -> last logged "state|text"
-local indBroken = {} -- indicator key -> true after an error
+local indErr = {}    -- indicator key -> last error text (an error means "unreadable now", it is retried)
 
 function D.ResetState()
     lastState, pendingState = nil, nil
@@ -54,15 +54,24 @@ local function UpdateIndicators()
     for _, entry in ipairs(BFA.indicators) do
         local id, def = entry.def.id, entry.def
         local key = entry.module .. "." .. id
-        if db.indicators[key] ~= false and not indBroken[key] then
+        if db.indicators[key] ~= false then
             local ok, state, icon, text, tip = pcall(def.Update, "target")
             if not ok then
-                indBroken[key] = true
-                BFA:Log("Driver", "indicator " .. key .. " error, disabled for this session: " .. tostring(state))
-            elseif state then
-                items[#items + 1] = { state = state, icon = icon, text = text, tip = tip }
+                -- e.g. aura or health data is secret during combat: unknown right now, so hide and retry next tick
+                local msg = tostring(state):gsub("\n.*", ""):sub(1, 140)
+                if indErr[key] ~= msg then
+                    indErr[key] = msg
+                    BFA:Log("Driver", string.format("indicator %s unreadable (combat=%s): %s", key,
+                        tostring(InCombatLockdown and InCombatLockdown()), msg))
+                end
+            else
+                if indErr[key] then
+                    indErr[key] = nil
+                    BFA:Log("Driver", "indicator " .. key .. " readable again")
+                end
+                if state then items[#items + 1] = { state = state, icon = icon, text = text, tip = tip } end
             end
-            local sig = ok and tostring(state) .. "|" .. tostring(text) or "error"
+            local sig = ok and tostring(state) .. "|" .. tostring(text) or "unreadable"
             if indLast[key] ~= sig then
                 indLast[key] = sig
                 BFA:Log(entry.module, "IND " .. id .. " " .. sig)
