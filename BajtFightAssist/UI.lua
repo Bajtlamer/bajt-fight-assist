@@ -138,15 +138,37 @@ local function Slot(i)
     return s
 end
 
+-- The row sits next to the badge that is visible: below the target badge or the screen badge, above the nameplate
+-- badge (below it would cover the nameplate). Without any badge it goes under the target frame.
+-- It is never put above the target frame: that is at the top edge of the screen on many layouts.
 function UI.PlaceRow()
     row:ClearAllPoints()
-    if TargetFrame and TargetFrame:IsShown() then
-        row:SetPoint("BOTTOMLEFT", TargetFrame, "TOPLEFT", 8, -6)
+    local anchorName
+    if badges.target:IsShown() then
+        row:SetPoint("TOPLEFT", badges.target, "BOTTOMLEFT", 0, -3)
+        anchorName = "target badge"
+    elseif badges.plate:IsShown() then
+        row:SetPoint("BOTTOMLEFT", badges.plate, "TOPLEFT", 0, 3)
+        anchorName = "plate badge"
+    elseif badges.screen:IsShown() then
+        row:SetPoint("TOPLEFT", badges.screen, "BOTTOMLEFT", 0, -3)
+        anchorName = "screen badge"
+    elseif TargetFrame and TargetFrame:IsShown() then
+        row:SetPoint("TOPLEFT", TargetFrame, "BOTTOMRIGHT", -40, 30)
+        anchorName = "target frame"
     else
         local p = BFA.db.point
-        row:SetPoint("BOTTOM", UIParent, p[3], p[4], p[5] + 40)
+        row:SetPoint("TOP", UIParent, p[3], p[4], p[5] - 40)
+        anchorName = "screen position"
     end
     row:SetScale(BFA.db.scale)
+    -- Log where the row really is, so a position problem can be verified from the log.
+    local sig = anchorName .. " left=" .. tostring(row:GetLeft()) .. " bottom=" .. tostring(row:GetBottom()) ..
+        " screen=" .. tostring(UIParent:GetWidth()) .. "x" .. tostring(UIParent:GetHeight())
+    if sig ~= UI.lastRowSig then
+        UI.lastRowSig = sig
+        BFA:Log("UI", "indicator row: " .. sig)
+    end
 end
 
 -- items: array of { state = "ok"|"warn"|"bad", icon = texture, text = string|nil, tip = string|nil }
