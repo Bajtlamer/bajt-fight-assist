@@ -1,0 +1,120 @@
+-- Bajt's Fight Assist: core. Database, module registry, events.
+-- Modules register with BajtFightAssist:RegisterModule(name, definition), see the plan for the definition format.
+local ADDON, BFA = ...
+_G.BajtFightAssist = BFA
+
+BFA.API_VERSION = 1
+BFA.modules = {}
+BFA.moduleOrder = {}
+BFA.indicators = {} -- { module = name, def = indicator definition }, sorted by def.order
+
+BFA.COLORS = {
+    IN = { 0.15, 1.0, 0.25 },
+    CLOSE = { 1.0, 0.6, 0.1 },
+    FAR = { 1.0, 0.2, 0.2 },
+    ok = { 0.15, 1.0, 0.25 },
+    warn = { 1.0, 0.6, 0.1 },
+    bad = { 1.0, 0.2, 0.2 },
+}
+BFA.SHORT = { IN = "IN", CLOSE = "MELEE", FAR = "FAR" }
+BFA.LABELS = { IN = "IN RANGE", CLOSE = "MELEE ATTACK", FAR = "OUT OF RANGE" }
+
+BFA.DEFAULTS = {
+    enabled = true,
+    anchor = "both", -- target | nameplate | both | screen
+    floatingText = true,
+    scale = 1,
+    npcs = false,        -- false: ignore NPC targets for the range badge
+    sameSide = false,    -- false: ignore players of your own faction or race
+    log = true,
+    inBattleground = true,
+    locked = true,
+    point = { "CENTER", "UIParent", "CENTER", 0, -150 },
+}
+
+function BFA.Meta(addon, field)
+    local fn = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+    return fn and fn(addon, field) or nil
+end
+BFA.version = BFA.Meta(ADDON, "Version") or "?"
+
+local loginHooks = {}
+function BFA:OnLogin(fn) loginHooks[#loginHooks + 1] = fn end
+
+function BFA:RegisterModule(name, def)
+    if self.modules[name] then
+        self:Log("Core", "module " .. name .. " registered twice, ignored")
+        return false
+    end
+    if def.apiVersion ~= self.API_VERSION then
+        self:Log("Core", string.format("module %s refused: api %s, core api %d", name, tostring(def.apiVersion), self.API_VERSION))
+        self:Say(string.format("Module %s needs API %s but Core has API %d. Update the addons.", name,
+            tostring(def.apiVersion), self.API_VERSION))
+        return false
+    end
+    local db = self.db
+    db.modules[name] = db.modules[name] or {}
+    for k, v in pairs(def.defaults or {}) do
+        if db.modules[name][k] == nil then db.modules[name][k] = v end
+    end
+    def.name = name
+    def.db = db.modules[name]
+    self.modules[name] = def
+    self.moduleOrder[#self.moduleOrder + 1] = name
+    for _, ind in ipairs(def.indicators or {}) do
+        self.indicators[#self.indicators + 1] = { module = name, def = ind }
+    end
+    table.sort(self.indicators, function(a, b) return (a.def.order or 100) < (b.def.order or 100) end)
+    self:Log("Core", string.format("module %s registered: %d probes, %d indicators", name,
+        #(def.ranged or {}), #(def.indicators or {})))
+    if def.OnRegister then
+        local ok, err = pcall(def.OnRegister, def)
+        if not ok then self:Log("Core", "module " .. name .. " OnRegister error: " .. tostring(err)) end
+    end
+    if self.Range then self.Range.Rebuild() end
+    return true
+end
+
+function BFA.OnEvent(event, arg1)
+    if event == "ADDON_LOADED" and arg1 == ADDON then
+        BajtFightAssistDB = BajtFightAssistDB or {}
+        local db = BajtFightAssistDB
+        BFA.db = db
+        for k, v in pairs(BFA.DEFAULTS) do
+            if db[k] == nil then
+                if type(v) == "table" then db[k] = { unpack(v) } else db[k] = v end
+            end
+        end
+        db.modules = db.modules or {}
+        db.roleModules = db.roleModules or {}
+        db.indicators = db.indicators or {}
+        BFA:FlushPreLog()
+    elseif event == "PLAYER_LOGIN" then
+        local db = BFA.db
+        -- One-time import of the Target Ranger settings (the old addon is not touched).
+        if not db.migrated and TargetRangerDB then
+            for k in pairs(BFA.DEFAULTS) do
+                if TargetRangerDB[k] ~= nil then db[k] = TargetRangerDB[k] end
+            end
+            db.scanHits = db.scanHits or TargetRangerDB.scanHits
+            db.migrated = true
+            BFA:Log("Core", "MIGRATE settings imported from TargetRangerDB")
+        end
+        BFA:Log("Core", "LOGIN core " .. BFA.version .. " api " .. BFA.API_VERSION)
+        for _, fn in ipairs(loginHooks) do
+            local ok, err = pcall(fn)
+            if not ok then BFA:Log("Core", "login hook error: " .. tostring(err)) end
+        end
+    elseif event == "SPELLS_CHANGED" then
+        if BFA.db and BFA.Range then BFA.Range.Rebuild() end
+    elseif event == "PLAYER_TARGET_CHANGED" then
+        if BFA.Driver then BFA.Driver.ResetState() end
+    end
+end
+
+local ev = CreateFrame("Frame")
+ev:RegisterEvent("ADDON_LOADED")
+ev:RegisterEvent("PLAYER_LOGIN")
+ev:RegisterEvent("SPELLS_CHANGED")
+ev:RegisterEvent("PLAYER_TARGET_CHANGED")
+ev:SetScript("OnEvent", function(_, event, arg1) BFA.OnEvent(event, arg1) end)

@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: Bajt's Fight Assist: Hunter
+## Notes: Hunter module for Bajt's Fight Assist: ranged attack range state.
+## Version: 0.2.0
+## Author: Radek Roza
+## Dependencies: BajtFightAssist
+## LoadOnDemand: 1
+## X-BFA-Class: HUNTER
+## X-BFA-API: 1
+
+Hunter.lua
