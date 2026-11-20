@@ -120,6 +120,23 @@ for _, sc in ipairs(scenarios) do
     print(line)
 end
 
+-- Exploration probes are logged but never change the state ------------------------------------------
+BFA:RegisterModule("Explorer", { apiVersion = 1, explore = { { id = 75 } } })
+W.known = {}
+for _, id in ipairs(HUNTER) do W.known[id] = true end
+W.spells, W.interact, W.items = hunter(true, true, I28, items(true)).spells, I28, items(true)
+W.spells["Auto Shot"] = true
+BFA.Range.Rebuild()
+local withExplore = fmt({ BFA.Range.Measure("target") })
+W.spells["Auto Shot"] = false
+BFA.Range.Rebuild()
+local dump = BFA.Range.ProbeDump("target")
+print((dump:find("x:Auto Shot=out", 1, true) and "PASS " or "FAIL ") .. "exploration probe appears in the probe dump: " .. dump:sub(-40))
+if not dump:find("x:Auto Shot=out", 1, true) then fails = fails + 1 end
+local stateIn = BFA.Range.Measure("target")
+print((withExplore:find("IN", 1, true) and "PASS " or "FAIL ") .. "state unaffected by exploration probes (in range stays in range)")
+if not withExplore:find("IN", 1, true) then fails = fails + 1 end
+
 -- Module API ----------------------------------------------------------------------
 local function check(cond, text)
     print((cond and "PASS " or "FAIL ") .. text)

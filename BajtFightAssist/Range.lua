@@ -6,6 +6,10 @@ local R = {}
 BFA.Range = R
 local checkers = {}
 R.checkers = checkers
+-- Exploration probes: modules list spells here to see how they answer at different distances.
+-- They appear in every logged probe line as x:<spell> but never influence the state.
+local explore = {}
+R.explore = explore
 
 local function Log(text) BFA:Log("Range", text) end
 
@@ -71,6 +75,7 @@ R.ItemInRange = ItemInRange
 ---------------------------------------------------------------------------
 function R.Rebuild()
     wipe(checkers)
+    wipe(explore)
     local seenPrimary = false
     local seenSpell = {}
     for _, modName in ipairs(BFA.moduleOrder) do
@@ -101,6 +106,14 @@ function R.Rebuild()
                     c.test = function(unit) return SpellInRange(name, unit) end
                     checkers[#checkers + 1] = c
                 end
+            end
+        end
+    end
+    for _, modName in ipairs(BFA.moduleOrder) do
+        for _, p in ipairs(BFA.modules[modName].explore or {}) do
+            local name = GetSpellData(p.id)
+            if name and IsKnown(p.id) then
+                explore[#explore + 1] = { name = "x:" .. name, test = function(unit) return SpellInRange(name, unit) end }
             end
         end
     end
@@ -194,6 +207,10 @@ end
 function R.ProbeDump(unit)
     local out = {}
     for _, c in ipairs(checkers) do
+        local r = c.test(unit)
+        out[#out + 1] = c.name .. "=" .. (r == nil and "na" or (r and "in" or "out"))
+    end
+    for _, c in ipairs(explore) do
         local r = c.test(unit)
         out[#out + 1] = c.name .. "=" .. (r == nil and "na" or (r and "in" or "out"))
     end

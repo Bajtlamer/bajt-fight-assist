@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: Bajt's Fight Assist: Rogue
+## Notes: Rogue module for Bajt's Fight Assist. Exploration build: logs what the client reports, no indicators yet.
+## Version: 0.1.0
+## Author: Radek Roza
+## Dependencies: BajtFightAssist
+## LoadOnDemand: 1
+## X-BFA-Class: ROGUE
+## X-BFA-API: 1
+
+Rogue.lua
