@@ -96,6 +96,86 @@ local function PoisonUpdate(slot)
     return state, icon, Duration(remaining), tip
 end
 
+---------------------------------------------------------------------------
+-- Backstab: can I use it now?
+-- The client offers no position check (no facing of the target for an addon), so "behind the target" is learned from
+-- what the client says after an attempt: the error "You must be behind your target." marks it for a few seconds.
+---------------------------------------------------------------------------
+local BACKSTAB_RANKS = { 26863, 25300, 11281, 11280, 11279, 8721, 2591, 2590, 2589, 53 }
+local DAGGER_CLASS, DAGGER_SUBCLASS = 2, 15
+local NOT_BEHIND_NOTE = 4 -- seconds the note about a failed attempt is shown
+local notBehindAt
+
+local function BackstabId()
+    for _, id in ipairs(BACKSTAB_RANKS) do
+        if (IsPlayerSpell and IsPlayerSpell(id)) or (IsSpellKnown and IsSpellKnown(id)) then return id end
+    end
+end
+
+local function HasDagger()
+    local item = GetInventoryItemID and GetInventoryItemID("player", MAIN_HAND)
+    if not item then return false end
+    local fn = (C_Item and C_Item.GetItemInfoInstant) or GetItemInfoInstant
+    if not fn then return false end
+    local _, _, _, _, _, class, subclass = fn(item)
+    return class == DAGGER_CLASS and subclass == DAGGER_SUBCLASS
+end
+
+local function SpellIcon(id)
+    if C_Spell and C_Spell.GetSpellInfo then
+        local info = C_Spell.GetSpellInfo(id)
+        return info and info.iconID
+    end
+    if GetSpellInfo then return (select(3, GetSpellInfo(id))) end
+end
+
+local function BackstabUpdate()
+    local id = BackstabId()
+    if not id or not HasDagger() then return nil end
+    local ok, usable, noPower
+    if C_Spell and C_Spell.IsSpellUsable then
+        ok, usable, noPower = pcall(C_Spell.IsSpellUsable, id)
+    else
+        ok, usable, noPower = pcall(IsUsableSpell, id)
+    end
+    if not ok or IsSecret(usable) or IsSecret(noPower) then return nil end
+    LogChange("backstab", string.format("usable=%s noPower=%s", tostring(usable), tostring(noPower)))
+    local icon = SpellIcon(id) or FALLBACK_ICON
+    if not usable then
+        if noPower then return "warn", icon, "E", "Backstab: not enough energy" end
+        return nil
+    end
+    if notBehindAt and GetTime() - notBehindAt < NOT_BEHIND_NOTE then
+        return "warn", icon, "BEHIND", "Backstab: your last attempt failed, you must be behind your target"
+    end
+    return "ok", icon, "BS", "Backstab can be used (the client cannot tell whether you stand behind the target)"
+end
+
+local function OnEvent(event, a, b, c)
+    if event == "UI_ERROR_MESSAGE" then
+        -- (errorType, message) on current clients; keep the last string argument to be safe
+        local message = type(c) == "string" and c or (type(b) == "string" and b or nil)
+        local wanted = _G.SPELL_FAILED_NOT_BEHIND or "You must be behind your target."
+        if message and not IsSecret(message) and message == wanted then notBehindAt = GetTime() end
+    elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
+        local spell = c
+        for _, id in ipairs(BACKSTAB_RANKS) do
+            if spell == id then notBehindAt = nil break end
+        end
+    elseif event == "PLAYER_ENTERING_WORLD" then
+        notBehindAt = nil
+    end
+end
+
+local events = CreateFrame("Frame")
+if events.RegisterUnitEvent then events:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player") end
+events:RegisterEvent("UI_ERROR_MESSAGE")
+events:RegisterEvent("PLAYER_ENTERING_WORLD")
+events:SetScript("OnEvent", function(_, event, a, b, c)
+    local ok, err = pcall(OnEvent, event, a, b, c)
+    if not ok then Log("event error: " .. tostring(err)) end
+end)
+
 -- The colour grows with the points: red 1, orange 2, yellow 3, lime 4, green 5 (spend them).
 local COMBO_STATE = { "bad", "warn", "yellow", "lime", "ok" }
 
@@ -115,6 +195,7 @@ local function ComboUpdate(unit)
 end
 
 BFA:RegisterModule("Rogue", {
+    OnEvent = OnEvent,           -- exposed for the offline tests
     apiVersion = 1,
     -- Throw is the ranged attack: the badge says THROW IN RANGE while it reaches the target, MELEE ATTACK when the target
     -- is closer than its minimum range and OUT OF RANGE beyond it. Range 5-30 yd is the fallback when the client gives none
@@ -139,6 +220,7 @@ BFA:RegisterModule("Rogue", {
     indicators = {
         { id = "poisonMain", title = "Main hand poison", order = 10, Update = function() return PoisonUpdate(MAIN_HAND) end },
         { id = "poisonOff", title = "Off hand poison", order = 20, Update = function() return PoisonUpdate(OFF_HAND) end },
+        { id = "backstab", title = "Backstab", order = 25, Update = BackstabUpdate },
         { id = "combo", title = "Combo points", order = 30, onPlate = true, Update = ComboUpdate },
         { id = "diag", title = "Diagnostics (hidden)", order = 1000, Update = Diagnose },
     },

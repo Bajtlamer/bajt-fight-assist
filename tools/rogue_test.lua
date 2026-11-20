@@ -16,17 +16,18 @@ GetTime = function() return NOW end
 local SECRET = setmetatable({}, { __add = function() error("secret") end })
 function issecretvalue(v) return v == SECRET end
 local mode = "normal"
-local W = { poison = { true, 1800000, 0, 7, false }, combo = 3, known = {} }
+local W = { poison = { true, 1800000, 0, 7, false }, combo = 3, known = {}, usable = true, noPower = false, weaponType = 15 }
 function IsStealthed() return true end
 function GetComboPoints() if mode == "error" then error("combo restricted") end return W.combo end
 function GetWeaponEnchantInfo() if mode == "secret" then return SECRET, SECRET end return unpack(W.poison) end
 function GetInventoryItemTexture(_, slot) return "tex" .. slot end
 function UnitCreatureType() return "Humanoid" end
 function UnitAffectingCombat() return false end
-function IsUsableSpell() return true, false end
+function IsUsableSpell() return W.usable, W.noPower end
+function GetItemInfoInstant(id) return id, "x", "y", "z", "itemicon", 2, W.weaponType end
 function GetInventoryItemID(_, slot) return 1000 + slot end
 function IsPlayerSpell(id) return W.known[id] or false end
-function GetSpellInfo() return nil end
+function GetSpellInfo(id) if id == 2589 then return "Backstab", nil, "bsicon" end return nil end
 
 local BFA = {}
 local function load(path, ...) return assert(loadfile(path))(...) end
@@ -86,6 +87,30 @@ mode = "normal"
 
 check(byId.combo.onPlate == true, "combo points are also shown next to the nameplate")
 check(not byId.poisonMain.onPlate and not byId.poisonOff.onPlate, "poison timers stay out of the nameplate")
+
+-- Backstab -----------------------------------------------------------------------------------------
+check(byId.backstab ~= nil, "a Backstab indicator is registered")
+local module = BFA.modules.Rogue
+st = full("backstab"); check(st == nil, "Backstab not learned: hidden")
+W.known[2589] = true
+W.weaponType = 7
+st = full("backstab"); check(st == nil, "Backstab learned but no dagger in the main hand: hidden")
+W.weaponType = 15
+st, icon, text = full("backstab"); check(st == "ok" and text == "BS" and icon == "bsicon", "dagger, enough energy: ok, BS, spell icon")
+W.usable, W.noPower = false, true
+st, icon, text = full("backstab"); check(st == "warn" and text == "E", "not enough energy: warn, E")
+W.usable, W.noPower = false, false
+st = full("backstab"); check(st == nil, "not usable for another reason: hidden")
+W.usable, W.noPower = true, false
+module.OnEvent("UI_ERROR_MESSAGE", 50, "You must be behind your target.")
+st, icon, text = full("backstab"); check(st == "warn" and text == "BEHIND", "the client said the target must be hit from behind: warn, BEHIND")
+NOW = NOW + 5
+st, icon, text = full("backstab"); check(st == "ok", "the note about the failed attempt fades after a few seconds")
+module.OnEvent("UI_ERROR_MESSAGE", 50, "You must be behind your target.")
+module.OnEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "guid", 2589)
+st = full("backstab"); check(st == "ok", "a successful Backstab clears the note")
+module.OnEvent("UI_ERROR_MESSAGE", 50, "Out of range.")
+st = full("backstab"); check(st == "ok", "other error messages do not matter")
 
 -- Combo points ----------------------------------------------------------------------------------
 local expected = { [1] = "bad", [2] = "warn", [3] = "yellow", [4] = "lime", [5] = "ok" }
