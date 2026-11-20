@@ -126,6 +126,8 @@ end
 -- trackedMarks[guid] = { marked = bool, at = time, expires = time|nil, src = "cast"|"seen"|"expired" }
 -- trackedAspect = { name, icon, src } (an aspect), false (seen: none) or nil (never observed: unknown)
 ---------------------------------------------------------------------------
+-- Hunter's Mark: instant, 100 yd, "Lasts for 2 min" (spellbook tooltip of Rank 1, so markDuration defaults to 120 s;
+-- higher ranks are not confirmed, the log line "mark gone N s after the cast" will show it).
 local MARK = 1130
 local ASPECT_IDS = { 13165, 13163, 5118, 13161, 20043, 13159 } -- Hawk, Monkey, Cheetah, Beast, Wild, Pack
 local trackedMarks = {}
