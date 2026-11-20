@@ -16,7 +16,7 @@ GetTime = function() return NOW end
 local SECRET = setmetatable({}, { __add = function() error("secret") end })
 function issecretvalue(v) return v == SECRET end
 local mode = "normal"
-local W = { poison = { true, 1800000, 0, 7, false }, combo = 3, known = {}, usable = true, noPower = false, weaponType = 15 }
+local W = { rangeState = "CLOSE", poison = { true, 1800000, 0, 7, false }, combo = 3, known = {}, usable = true, noPower = false, weaponType = 15 }
 function IsStealthed() return true end
 function GetComboPoints() if mode == "error" then error("combo restricted") end return W.combo end
 function GetWeaponEnchantInfo() if mode == "secret" then return SECRET, SECRET end return unpack(W.poison) end
@@ -88,6 +88,7 @@ mode = "normal"
 check(byId.combo.onPlate == true, "combo points are also shown next to the nameplate")
 check(not byId.poisonMain.onPlate and not byId.poisonOff.onPlate, "poison timers stay out of the nameplate")
 
+BFA.Range.Measure = function() return W.rangeState end        -- the range engine, answered by the test
 -- Backstab -----------------------------------------------------------------------------------------
 check(byId.backstab ~= nil, "a Backstab indicator is registered")
 local module = BFA.modules.Rogue
@@ -97,6 +98,13 @@ W.weaponType = 7
 st = full("backstab"); check(st == nil, "Backstab learned but no dagger in the main hand: hidden")
 W.weaponType = 15
 st, icon, text = full("backstab"); check(st == "ok" and text == "BS" and icon == "bsicon", "dagger, enough energy: ok, BS, spell icon")
+for _, away in ipairs({ "IN", "FAR" }) do
+    W.rangeState = away
+    st = full("backstab"); check(st == nil, "target not within melee reach (" .. away .. "): hidden")
+end
+W.rangeState = nil
+st = full("backstab"); check(st == nil, "range unknown: hidden")
+W.rangeState = "CLOSE"
 W.usable, W.noPower = false, true
 st, icon, text = full("backstab"); check(st == "warn" and text == "E", "not enough energy: warn, E")
 W.usable, W.noPower = false, false

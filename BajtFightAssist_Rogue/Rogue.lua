@@ -97,7 +97,7 @@ local function PoisonUpdate(slot)
 end
 
 ---------------------------------------------------------------------------
--- Backstab: can I use it now?
+-- Backstab: can I use it now? Dagger in hand, target within reach, enough energy.
 -- The client offers no position check (no facing of the target for an addon), so "behind the target" is learned from
 -- what the client says after an attempt: the error "You must be behind your target." marks it for a few seconds.
 ---------------------------------------------------------------------------
@@ -129,9 +129,12 @@ local function SpellIcon(id)
     if GetSpellInfo then return (select(3, GetSpellInfo(id))) end
 end
 
-local function BackstabUpdate()
+local function BackstabUpdate(unit)
     local id = BackstabId()
     if not id or not HasDagger() then return nil end
+    -- Only within reach of the dagger: the range engine says CLOSE when the target is nearer than Throw works.
+    local state = BFA.Range and BFA.Range.Measure and BFA.Range.Measure(unit or "target")
+    if state ~= "CLOSE" then return nil end
     local ok, usable, noPower
     if C_Spell and C_Spell.IsSpellUsable then
         ok, usable, noPower = pcall(C_Spell.IsSpellUsable, id)
