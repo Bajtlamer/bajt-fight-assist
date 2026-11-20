@@ -15,6 +15,9 @@ BFA.COLORS = {
     ok = { 0.15, 1.0, 0.25 },
     warn = { 1.0, 0.6, 0.1 },
     bad = { 1.0, 0.2, 0.2 },
+    -- In-between steps for indicators that grade a count (Rogue combo points: red, orange, yellow, lime, green).
+    yellow = { 1.0, 0.9, 0.2 },
+    lime = { 0.6, 1.0, 0.2 },
 }
 BFA.SHORT = { IN = "IN", CLOSE = "MELEE", FAR = "FAR" }
 BFA.LABELS = { IN = "IN RANGE", CLOSE = "MELEE ATTACK", FAR = "OUT OF RANGE" }

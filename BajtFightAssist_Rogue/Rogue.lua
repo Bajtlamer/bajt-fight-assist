@@ -96,6 +96,9 @@ local function PoisonUpdate(slot)
     return state, icon, Duration(remaining), tip
 end
 
+-- The colour grows with the points: red 1, orange 2, yellow 3, lime 4, green 5 (spend them).
+local COMBO_STATE = { "bad", "warn", "yellow", "lime", "ok" }
+
 local function ComboUpdate(unit)
     if not GetComboPoints then return nil end
     local ok, points = pcall(GetComboPoints, "player", unit)
@@ -108,7 +111,7 @@ local function ComboUpdate(unit)
         local _, _, spellIcon = GetSpellInfo(EVISCERATE)
         if spellIcon then icon = spellIcon end
     end
-    return points >= 5 and "warn" or "ok", icon, tostring(points), string.format("%d combo points", points)
+    return COMBO_STATE[math.min(points, 5)], icon, tostring(points), string.format("%d combo points", points)
 end
 
 BFA:RegisterModule("Rogue", {

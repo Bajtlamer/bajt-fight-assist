@@ -88,10 +88,13 @@ check(byId.combo.onPlate == true, "combo points are also shown next to the namep
 check(not byId.poisonMain.onPlate and not byId.poisonOff.onPlate, "poison timers stay out of the nameplate")
 
 -- Combo points ----------------------------------------------------------------------------------
-W.combo = 3
-st, icon, text = full("combo"); check(st == "ok" and text == "3", "3 combo points: ok, number 3")
-W.combo = 5
-st, icon, text = full("combo"); check(st == "warn" and text == "5", "5 combo points: warn, spend them")
+local expected = { [1] = "bad", [2] = "warn", [3] = "yellow", [4] = "lime", [5] = "ok" }
+for n = 1, 5 do
+    W.combo = n
+    st, icon, text = full("combo")
+    check(st == expected[n] and text == tostring(n), n .. " combo points: colour " .. expected[n] .. ", number " .. n)
+    check(BFA.COLORS[st] ~= nil, "the colour " .. tostring(st) .. " exists in the shared colour table")
+end
 W.combo = 0
 st = full("combo"); check(st == nil, "no combo points: hidden")
 mode = "error"

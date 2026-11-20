@@ -208,7 +208,7 @@ local function Fill(row, items)
     row:Show()
 end
 
--- items: array of { state = "ok"|"warn"|"bad", icon = texture, text = string|nil, tip = string|nil, plate = bool|nil }
+-- items: array of { state = a key of BFA.COLORS ("ok"|"warn"|"bad"|"yellow"|"lime"), icon = texture, text = string|nil, tip = string|nil, plate = bool|nil }
 function UI.ShowIndicators(items)
     local db = BFA.db
     local plateOnly = (db.anchor == "nameplate")
