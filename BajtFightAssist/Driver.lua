@@ -78,7 +78,14 @@ local function UpdateIndicators()
             end
         end
     end
-    UI.ShowIndicators(items)
+    local okShow, errShow = pcall(UI.ShowIndicators, items)
+    if not okShow then
+        local msg = tostring(errShow):gsub("\n.*", ""):sub(1, 160)
+        if D.lastShowError ~= msg then
+            D.lastShowError = msg
+            BFA:Log("Driver", "ShowIndicators error: " .. msg)
+        end
+    end
 end
 
 local driver = CreateFrame("Frame")

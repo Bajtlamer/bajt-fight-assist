@@ -222,12 +222,19 @@ function UI.ShowIndicators(items)
     local plateWhere = #plateItems > 0 and PlacePlate(rows.plate) or nil
     Fill(rows.plate, plateWhere and plateItems or {})
 
-    -- Log where the rows really are, so a position problem can be verified from the log.
-    local function rect(row) return tostring(row:GetLeft()) .. "," .. tostring(row:GetBottom()) end
-    local sig = string.format("main=%s(%s) plate=%s(%s) screen=%sx%s offset=%s,%s", tostring(mainWhere),
-        mainWhere and rect(rows.main) or "-", tostring(plateWhere), plateWhere and rect(rows.plate) or "-",
-        tostring(UIParent:GetWidth()), tostring(UIParent:GetHeight()), tostring(db.rowX), tostring(db.rowY))
-    if sig ~= UI.lastRowSig then
+    -- Log where the rows are, so a position problem can be verified from the log. Frames anchored to a nameplate
+    -- are restricted regions that addons may not measure (GetLeft raises an error), hence the pcall and no
+    -- measurement of the plate row at all.
+    local function rect(row)
+        local ok, l, b = pcall(function() return row:GetLeft(), row:GetBottom() end)
+        return ok and (tostring(l) .. "," .. tostring(b)) or "unmeasurable"
+    end
+    local okS, sig = pcall(function()
+        return string.format("main=%s(%s) plate=%s screen=%sx%s offset=%s,%s", tostring(mainWhere),
+            mainWhere and rect(rows.main) or "-", tostring(plateWhere), tostring(UIParent:GetWidth()),
+            tostring(UIParent:GetHeight()), tostring(db.rowX), tostring(db.rowY))
+    end)
+    if okS and sig ~= UI.lastRowSig then
         UI.lastRowSig = sig
         BFA:Log("UI", "indicator rows: " .. sig)
     end

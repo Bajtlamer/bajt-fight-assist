@@ -4,7 +4,13 @@ local root = arg[1]
 
 local mt = {}
 local function stub() return setmetatable({}, mt) end
-mt.__index = function() return function() return stub() end end
+RESTRICTED = false
+mt.__index = function(_, k)
+    if RESTRICTED and (k == "GetLeft" or k == "GetBottom") then
+        return function() error("Action[FrameMeasurement] failed because[Can't measure restricted regions]") end
+    end
+    return function() return stub() end
+end
 function CreateFrame() return stub() end
 UIParent = stub()
 SlashCmdList = {}
@@ -174,6 +180,17 @@ local okUI, errUI = pcall(function()
 end)
 print((okUI and "PASS " or "FAIL ") .. "UI smoke test" .. (okUI and "" or (": " .. tostring(errUI))))
 if not okUI then fails = fails + 1 end
+
+-- Frames anchored to a nameplate are restricted regions: measuring them raises an error, which must not escape.
+RESTRICTED = true
+BFA.UI.lastRowSig = nil
+local okR, errR = pcall(function()
+    BFA.UI.ShowIndicators({ { state = "ok", icon = "i", text = "1.2k", plate = true }, { state = "warn" } })
+end)
+RESTRICTED = false
+print((okR and "PASS " or "FAIL ") .. "restricted regions are not measured in a way that breaks the display" ..
+    (okR and "" or (": " .. tostring(errR))))
+if not okR then fails = fails + 1 end
 
 if fails > 0 then print(fails .. " FAILED") os.exit(1) end
 print("ALL PASS (hunter indicators)")
