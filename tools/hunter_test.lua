@@ -127,11 +127,9 @@ reset(); W.aurasHidden = true; expect("aspect: auras hidden in combat", "aspect"
 reset(); W.known[883] = false; expect("pet: no Call Pet", "pet", nil, nil)
 reset(); expect("pet: missing", "pet", "warn", "!")
 reset(); W.pet = { dead = true }; expect("pet: dead", "pet", "bad", "X")
-reset(); W.pet = { hp = 100, max = 100, happy = 3 }; expect("pet: healthy", "pet", "ok", "100%")
-reset(); W.pet = { hp = 20, max = 100, happy = 3 }; expect("pet: low health", "pet", "warn", "20%")
-reset(); W.pet = { hp = 100, max = 100, happy = 1 }; expect("pet: unhappy", "pet", "bad", "100%")
-reset(); W.pet = { hp = 50, max = 100 }; expect("pet: happiness unknown still shown", "pet", "ok", "50%")
-reset(); W.pet = { hp = SECRET, max = SECRET, happy = 3 }; expect("pet: secret health, alive without percentage", "pet", "ok", nil)
+reset(); W.pet = { hp = 100, max = 100 }; expect("pet: alive, no percentage", "pet", "ok", nil)
+reset(); W.pet = { hp = SECRET, max = 100 }; expect("pet: secret health does not matter", "pet", "ok", nil)
+
 
 
 -- Tracking from your own casts (auras are hidden in combat) ---------------------------------------------------

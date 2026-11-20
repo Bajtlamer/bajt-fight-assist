@@ -287,6 +287,8 @@ end
 -- Pet
 ---------------------------------------------------------------------------
 local CALL_PET = 883
+-- Findings from the logs: this client has no pet happiness (GetPetHappiness returns nil) and UnitHealth of the pet
+-- is a secret value at all times, so only "missing", "dead" and "alive" can be shown truthfully.
 local function PetUpdate()
     if not Known(CALL_PET) then return nil end
     local _, icon = SpellNameIcon(CALL_PET)
@@ -298,26 +300,8 @@ local function PetUpdate()
         LogChange("pet", "dead")
         return "bad", icon, "X", "Pet is dead"
     end
-    do
-        local function secret(v) return issecretvalue and issecretvalue(v) and "secret" or "readable" end
-        local okH, h = pcall(UnitHealth, "pet")
-        local okM, m = pcall(UnitHealthMax, "pet")
-        local okP, p = pcall(function() return GetPetHappiness and GetPetHappiness() end)
-        LogChange("pet-api", string.format("health ok=%s %s type=%s | max ok=%s %s | happiness ok=%s type=%s value=%s | %s",
-            tostring(okH), okH and secret(h) or "-", type(h), tostring(okM), okM and secret(m) or "-", tostring(okP),
-            type(p), okP and not (issecretvalue and issecretvalue(p)) and tostring(p) or "-", Secrecy()))
-    end
-    local _, happy = Try(function() return GetPetHappiness and GetPetHappiness() end)
-    -- health is secret during combat (arithmetic on it raises an error): then no percentage, but the pet is alive
-    local _, hp = Try(function()
-        local cur, maxHp = UnitHealth("pet"), UnitHealthMax("pet")
-        if maxHp > 0 then return math.floor(cur / maxHp * 100 + 0.5) end
-    end)
-    LogChange("pet", string.format("alive hp=%s happiness=%s", tostring(hp), tostring(happy)))
-    if happy == 1 then return "bad", icon, hp and (hp .. "%") or nil, "Pet is unhappy" end
-    local state = (hp and hp < 30) and "warn" or "ok"
-    local tip = (UnitName("pet") or "Pet") .. (hp and (", health " .. hp .. "%") or "")
-    return state, icon, hp and (hp .. "%") or nil, tip
+    LogChange("pet", "alive")
+    return "ok", icon, nil, UnitName("pet") or "Pet"
 end
 
 local function ResetTracking()
