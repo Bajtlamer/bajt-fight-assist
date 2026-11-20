@@ -117,7 +117,7 @@ BFA:RegisterModule("Rogue", {
     -- is closer than its minimum range and OUT OF RANGE beyond it. Range 5-30 yd is the fallback when the client gives none
     -- (the minimum is not confirmed: the log shows Throw "in" only from about 8 yd and "out" at 30-35 yd).
     ranged = {
-        { id = 2764, primary = true, fmin = 5, fmax = 30, label = "THROW IN RANGE" },
+        { id = 2764, primary = true, fmin = 5, fmax = 30, label = "THROW IN RANGE", closeTone = "IN" },
     },
     -- Exploration probes: logged as x:<spell> in every range sample, never used for the state.
     explore = {

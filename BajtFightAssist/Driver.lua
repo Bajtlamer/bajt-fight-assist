@@ -107,7 +107,7 @@ driver:SetScript("OnUpdate", function(_, dt)
         UpdateIndicators()
     end
 
-    local state, sub
+    local state, sub, tone
     if testStep then
         if GetTime() >= testNext then
             testStep = testStep + 1
@@ -128,8 +128,8 @@ driver:SetScript("OnUpdate", function(_, dt)
             end
             return
         end
-        local bracket
-        state, sub, bracket = R.Measure("target")
+        local bracket, ranged
+        state, sub, bracket, ranged, tone = R.Measure("target")
         local now = GetTime()
         if not state then
             -- unknown: show nothing rather than something that may be false
@@ -150,7 +150,7 @@ driver:SetScript("OnUpdate", function(_, dt)
             if pendingState == state then
                 pendingTicks = pendingTicks + 1
                 if pendingTicks >= 2 then
-                    if lastState ~= nil then UI.Float(state, sub) end
+                    if lastState ~= nil then UI.Float(state, sub, tone) end
                     lastState = state
                 end
             else
@@ -166,7 +166,7 @@ driver:SetScript("OnUpdate", function(_, dt)
     local sT, sP, sS = UI.Anchor()
     if testStep and not sT and not sP then sS = true end
     local b = UI.badges
-    if sT then UI.ApplyBadge(b.target, state, sub, first) else b.target:Hide() end
-    if sP then UI.ApplyBadge(b.plate, state, sub, first) else b.plate:Hide() end
-    if sS then UI.ApplyBadge(b.screen, state, sub, first) else b.screen:Hide() end
+    if sT then UI.ApplyBadge(b.target, state, sub, first, tone) else b.target:Hide() end
+    if sP then UI.ApplyBadge(b.plate, state, sub, first, tone) else b.plate:Hide() end
+    if sS then UI.ApplyBadge(b.screen, state, sub, first, tone) else b.screen:Hide() end
 end)

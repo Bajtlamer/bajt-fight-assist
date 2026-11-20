@@ -58,8 +58,8 @@ function UI.SetupScreenBadge()
     UI.PlaceScreenBadge()
 end
 
-function UI.ApplyBadge(f, state, sub, iconTex)
-    local c = COLORS[state]
+function UI.ApplyBadge(f, state, sub, iconTex, tone)
+    local c = COLORS[tone or state]
     f.number:SetText(SHORT[state])
     f.number:SetTextColor(c[1], c[2], c[3])
     f.sub:SetText(sub)
@@ -266,12 +266,12 @@ float:SetScript("OnUpdate", function(self, dt)
 end)
 
 local lastFloat = 0
-function UI.Float(state, label)
+function UI.Float(state, label, tone)
     if not BFA.db.floatingText then return end
     local now = GetTime()
     if now - lastFloat < 0.6 then return end
     lastFloat = now
-    local c = COLORS[state]
+    local c = COLORS[tone or state]
     label = label or BFA.LABELS[state]
     BFA:Log("UI", "FLOAT " .. label)
     float.text:SetText(label)

@@ -128,6 +128,21 @@ for _, sc in ipairs(scenarios) do
     print(line)
 end
 
+-- The colour of MELEE ATTACK: orange for a Hunter (inside the dead zone), green for a Rogue (melee is the job).
+W.known = { [2764] = true }
+W.spells, W.interact, W.items = { Throw = false }, { [3] = true, [2] = true, [4] = true }, items(true)
+BFA.Range.Rebuild()
+local _, _, _, _, rogueTone = BFA.Range.Measure("target")
+print((rogueTone == "IN" and "PASS " or "FAIL ") .. "Rogue MELEE ATTACK is drawn in the green of IN, got " .. tostring(rogueTone))
+if rogueTone ~= "IN" then fails = fails + 1 end
+W.known = {}
+for _, id in ipairs(HUNTER) do W.known[id] = true end
+W.spells, W.interact, W.items = hunter(false, true, ALL, items(true)).spells, ALL, items(true)
+BFA.Range.Rebuild()
+local hs, _, _, _, hunterTone = BFA.Range.Measure("target")
+print((hs == "CLOSE" and hunterTone == nil and "PASS " or "FAIL ") .. "Hunter MELEE ATTACK keeps its own colour (tone " .. tostring(hunterTone) .. ")")
+if not (hs == "CLOSE" and hunterTone == nil) then fails = fails + 1 end
+
 -- Exploration probes are logged but never change the state ------------------------------------------
 BFA:RegisterModule("Explorer", { apiVersion = 1, explore = { { id = 75 } } })
 W.known = {}

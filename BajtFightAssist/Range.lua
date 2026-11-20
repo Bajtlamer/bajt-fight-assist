@@ -99,7 +99,7 @@ function R.Rebuild()
                 if maxR then
                     local c = {
                         name = name, min = minR, max = maxR, apiMin = apiMin, apiMax = apiMax,
-                        melee = melee, icon = icon, module = modName, label = p.label,
+                        melee = melee, icon = icon, module = modName, label = p.label, closeTone = p.closeTone,
                         primary = p.primary and not seenPrimary or false,
                     }
                     if c.primary then seenPrimary = true end
@@ -143,7 +143,8 @@ end
 ---------------------------------------------------------------------------
 -- Measurement
 ---------------------------------------------------------------------------
--- Returns state ("IN"|"CLOSE"|"FAR") or nil when unknown, label, bracket text (for the log only), ranged flag.
+-- Returns state ("IN"|"CLOSE"|"FAR") or nil when unknown, label, bracket text (for the log only), ranged flag and,
+-- when the primary probe asks for it, the state whose colour to use (a Rogue wants MELEE ATTACK in the green of IN).
 -- No distance number is ever returned: probes only give wide brackets, a number would be an estimate.
 function R.Measure(unit)
     local hi, lo = nil, 0
@@ -194,7 +195,7 @@ function R.Measure(unit)
     -- Primary attack is out of range, yet a positive probe puts the target inside its maximum range:
     -- the only way both are true is that the target is closer than the attack's minimum range.
     if hi and primary and primary.min > 0 and hi <= pmax then
-        return "CLOSE", BFA.LABELS.CLOSE, bracket(0, primary.min), true
+        return "CLOSE", BFA.LABELS.CLOSE, bracket(0, primary.min), true, primary.closeTone
     end
     local far = lo > pmax and lo or pmax
     if hi and far > hi then return nil end -- e.g. out of Auto Shot but inside an interact check: contradiction
