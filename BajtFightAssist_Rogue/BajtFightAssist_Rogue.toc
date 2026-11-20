@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: Bajt's Fight Assist: Rogue
-## Notes: Rogue module for Bajt's Fight Assist: THROW IN RANGE badge from Throw, plus a diagnostic log of what the client reports (no other indicators yet).
-## Version: 0.1.1
+## Notes: Rogue module for Bajt's Fight Assist: THROW IN RANGE badge, poison timers on both weapons, combo points, and a diagnostic log.
+## Version: 0.2.0
 ## Author: Radek Roza
 ## Dependencies: BajtFightAssist
 ## LoadOnDemand: 1
