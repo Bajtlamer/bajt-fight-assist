@@ -146,7 +146,7 @@ local function Slot(row, i)
     end
     s.text = s:CreateFontString(nil, "OVERLAY")
     s.text:SetFont(FONT, 10, "OUTLINE")
-    s.text:SetPoint("TOP", s, "BOTTOM", 0, 2)
+    s.text:SetPoint("TOP", s, "BOTTOM", 0, -1)
     s:SetScript("OnEnter", function(self)
         if self.tip and GameTooltip then
             GameTooltip:SetOwner(self, "ANCHOR_TOP")
