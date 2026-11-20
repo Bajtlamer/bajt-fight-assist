@@ -31,7 +31,9 @@ SlashCmdList["BAJTFIGHTASSIST"] = function(msg)
     if not db then return end
     local cmd, arg = msg:match("^(%S*)%s*(.-)$")
     cmd = cmd:lower()
-    if cmd == "on" or cmd == "off" then
+    if cmd == "" or cmd == "config" or cmd == "options" then
+        BFA.Config.Toggle()
+    elseif cmd == "on" or cmd == "off" then
         db.enabled = (cmd == "on")
         BFA:Say("Addon " .. cmd)
     elseif cmd == "anchor" and (arg == "target" or arg == "nameplate" or arg == "both" or arg == "screen") then
@@ -107,6 +109,6 @@ SlashCmdList["BAJTFIGHTASSIST"] = function(msg)
         BFA.UI.PlaceScreenBadge()
         BFA:Say("Settings reset.")
     else
-        BFA:Say("/bfa on|off | anchor target|nameplate|both|screen | text on|off | mark | log on|off|clear | npc on|off | sameside on|off | bg on|off | indicator <Module.id> on|off | row X Y | modules | scan | scale N | unlock | lock | test | debug | reset")
+        BFA:Say("/bfa (settings window) | on|off | anchor target|nameplate|both|screen | text on|off | mark | log on|off|clear | npc on|off | sameside on|off | bg on|off | indicator <Module.id> on|off | row X Y | modules | scan | scale N | unlock | lock | test | debug | reset")
     end
 end

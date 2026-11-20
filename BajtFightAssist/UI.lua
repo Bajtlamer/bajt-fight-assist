@@ -105,8 +105,8 @@ end
 
 ---------------------------------------------------------------------------
 -- Indicator rows: round icons with a colored ring and optional short text.
--- "main" sits by the target badge (or screen badge), "plate" by the nameplate badge and shows only the indicators
--- flagged onPlate (everything when the badge is nameplate-only).
+-- "main" sits by the target badge (or screen badge), "plate" left of the nameplate badge and shows only the
+-- indicators the player allows there (everything when the badge is nameplate-only).
 ---------------------------------------------------------------------------
 local SLOT = 26
 local STEP = 30
@@ -183,8 +183,8 @@ local function PlacePlate(row)
     local db = BFA.db
     if not badges.plate:IsShown() then return nil end
     row:ClearAllPoints()
-    -- Centered above the badge; the 12 px keep the count text (under each icon) clear of the badge.
-    row:SetPoint("BOTTOM", badges.plate, "TOP", 0, 12)
+    -- To the left of the badge, on its line (the count text sits under each icon).
+    row:SetPoint("RIGHT", badges.plate, "LEFT", -4, 0)
     return "plate badge"
 end
 

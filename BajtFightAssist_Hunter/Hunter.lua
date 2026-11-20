@@ -345,9 +345,9 @@ BFA:RegisterModule("Hunter", {
     },
     -- Update returns state ("ok"|"warn"|"bad"), icon, short text, tooltip; nil hides the indicator (unknown or irrelevant).
     indicators = {
-        { id = "ammo", order = 10, onPlate = true, Update = AmmoUpdate }, -- also shown by the nameplate badge
-        { id = "mark", order = 20, Update = MarkUpdate },
-        { id = "aspect", order = 30, Update = AspectUpdate },
-        { id = "pet", order = 40, Update = PetUpdate },
+        { id = "ammo", title = "Ammo", order = 10, onPlate = true, Update = AmmoUpdate }, -- also shown by the nameplate badge
+        { id = "mark", title = "Hunter's Mark", order = 20, Update = MarkUpdate },
+        { id = "aspect", title = "Aspect", order = 30, Update = AspectUpdate },
+        { id = "pet", title = "Pet", order = 40, Update = PetUpdate },
     },
 })

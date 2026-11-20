@@ -31,6 +31,7 @@ BFA.DEFAULTS = {
     locked = true,
     rowX = 4,            -- indicator row offset from the badge (to the right), see /bfa row. 4 = under the range icon
     rowY = -3,
+    minimap = { hide = false, angle = 225 },
     point = { "CENTER", "UIParent", "CENTER", 0, -150 },
 }
 
@@ -42,6 +43,13 @@ BFA.version = BFA.Meta(ADDON, "Version") or "?"
 
 local loginHooks = {}
 function BFA:OnLogin(fn) loginHooks[#loginHooks + 1] = fn end
+
+-- Does this indicator also appear next to the nameplate? The player's choice wins over the module default.
+function BFA:IndicatorOnPlate(key, def)
+    local v = self.db.plate[key]
+    if v == nil then return def.onPlate and true or false end
+    return v
+end
 
 function BFA:RegisterModule(name, def)
     if self.modules[name] then
@@ -94,6 +102,8 @@ function BFA.OnEvent(event, arg1)
         end
         db.modules = db.modules or {}
         db.roleModules = db.roleModules or {}
+        db.plate = db.plate or {}
+        db.minimap = db.minimap or { hide = false, angle = 225 }
         db.indicators = db.indicators or {}
         BFA:FlushPreLog()
     elseif event == "PLAYER_LOGIN" then
