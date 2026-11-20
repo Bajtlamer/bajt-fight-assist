@@ -29,6 +29,8 @@ BFA.DEFAULTS = {
     log = true,
     inBattleground = true,
     locked = true,
+    rowX = 24,           -- indicator row offset from the badge (to the right), see /bfa row
+    rowY = -3,
     point = { "CENTER", "UIParent", "CENTER", 0, -150 },
 }
 

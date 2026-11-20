@@ -166,7 +166,7 @@ W.aurasHidden = true; expectState("track: seen aspect stays in combat", "aspect"
 -- Smoke test of the display code with stub frames: must not raise errors.
 load(root .. "/BajtFightAssist/UI.lua", "BajtFightAssist", BFA)
 local okUI, errUI = pcall(function()
-    BFA.UI.ShowIndicators({ { state = "ok", icon = "i", text = "1.2k", tip = "t" }, { state = "warn" }, { state = "bad", text = "X" } })
+    BFA.UI.ShowIndicators({ { state = "ok", icon = "i", text = "1.2k", tip = "t", plate = true }, { state = "warn" }, { state = "bad", text = "X" } })
     BFA.UI.ShowIndicators({})
     BFA.UI.HideIndicators()
     BFA.UI.ApplyBadge(BFA.UI.badges.target, "CLOSE", "MELEE ATTACK", "icon")

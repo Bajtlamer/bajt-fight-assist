@@ -69,7 +69,7 @@ local function UpdateIndicators()
                     indErr[key] = nil
                     BFA:Log("Driver", "indicator " .. key .. " readable again")
                 end
-                if state then items[#items + 1] = { state = state, icon = icon, text = text, tip = tip } end
+                if state then items[#items + 1] = { state = state, icon = icon, text = text, tip = tip, plate = def.onPlate } end
             end
             local sig = ok and tostring(state) .. "|" .. tostring(text) or "unreadable"
             if indLast[key] ~= sig then

@@ -71,6 +71,15 @@ SlashCmdList["BAJTFIGHTASSIST"] = function(msg)
         else
             BFA:Say("/bfa indicator <Module.id> on|off")
         end
+    elseif cmd == "row" then
+        local x, y = arg:match("^(-?%d+%.?%d*)%s+(-?%d+%.?%d*)$")
+        if x then
+            db.rowX, db.rowY = tonumber(x), tonumber(y)
+            BFA:Say(string.format("Indicator row offset: %s, %s", x, y))
+        else
+            BFA:Say(string.format("Indicator row offset is %s, %s. Usage: /bfa row X Y (X right, Y up; default 24 -3)",
+                tostring(db.rowX), tostring(db.rowY)))
+        end
     elseif cmd == "modules" then
         BFA:Say("Core " .. BFA.version .. " api " .. BFA.API_VERSION .. ", modules: " ..
             (#BFA.moduleOrder > 0 and table.concat(BFA.moduleOrder, ", ") or "none"))
@@ -98,6 +107,6 @@ SlashCmdList["BAJTFIGHTASSIST"] = function(msg)
         BFA.UI.PlaceScreenBadge()
         BFA:Say("Settings reset.")
     else
-        BFA:Say("/bfa on|off | anchor target|nameplate|both|screen | text on|off | mark | log on|off|clear | npc on|off | sameside on|off | bg on|off | indicator <Module.id> on|off | modules | scan | scale N | unlock | lock | test | debug | reset")
+        BFA:Say("/bfa on|off | anchor target|nameplate|both|screen | text on|off | mark | log on|off|clear | npc on|off | sameside on|off | bg on|off | indicator <Module.id> on|off | row X Y | modules | scan | scale N | unlock | lock | test | debug | reset")
     end
 end

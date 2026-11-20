@@ -104,28 +104,49 @@ function UI.Anchor()
 end
 
 ---------------------------------------------------------------------------
--- Indicator row: icons with a colored border and optional short text, one slot per visible indicator
+-- Indicator rows: round icons with a colored ring and optional short text.
+-- "main" sits by the target badge (or screen badge), "plate" by the nameplate badge and shows only the indicators
+-- flagged onPlate (everything when the badge is nameplate-only).
 ---------------------------------------------------------------------------
-local row = CreateFrame("Frame", "BajtFightAssistRow", UIParent)
-row:SetSize(10, 24)
-row:SetFrameStrata("HIGH")
-row:Hide()
-local slots = {}
+local SLOT = 26
+local STEP = 30
+local MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 
-local function Slot(i)
-    local s = slots[i]
+local function CreateRow(name)
+    local row = CreateFrame("Frame", name, UIParent)
+    row:SetSize(10, SLOT)
+    row:SetFrameStrata("HIGH")
+    row:Hide()
+    row.slots = {}
+    return row
+end
+local rows = { main = CreateRow("BajtFightAssistRow"), plate = CreateRow("BajtFightAssistPlateRow") }
+
+local function Slot(row, i)
+    local s = row.slots[i]
     if s then return s end
     s = CreateFrame("Frame", nil, row)
-    s:SetSize(24, 24)
+    s:SetSize(SLOT, SLOT)
     s:EnableMouse(true)
-    s.border = s:CreateTexture(nil, "BACKGROUND")
-    s.border:SetAllPoints()
+    s.ring = s:CreateTexture(nil, "BACKGROUND")
+    s.ring:SetAllPoints()
     s.icon = s:CreateTexture(nil, "ARTWORK")
     s.icon:SetPoint("TOPLEFT", 2, -2)
     s.icon:SetPoint("BOTTOMRIGHT", -2, 2)
+    s.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    if s.CreateMaskTexture then
+        local ringMask = s:CreateMaskTexture()
+        ringMask:SetTexture(MASK)
+        ringMask:SetAllPoints(s.ring)
+        s.ring:AddMaskTexture(ringMask)
+        local iconMask = s:CreateMaskTexture()
+        iconMask:SetTexture(MASK)
+        iconMask:SetAllPoints(s.icon)
+        s.icon:AddMaskTexture(iconMask)
+    end
     s.text = s:CreateFontString(nil, "OVERLAY")
     s.text:SetFont(FONT, 10, "OUTLINE")
-    s.text:SetPoint("BOTTOMRIGHT", 2, -1)
+    s.text:SetPoint("TOP", s, "BOTTOM", 0, 2)
     s:SetScript("OnEnter", function(self)
         if self.tip and GameTooltip then
             GameTooltip:SetOwner(self, "ANCHOR_TOP")
@@ -134,68 +155,88 @@ local function Slot(i)
         end
     end)
     s:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
-    slots[i] = s
+    row.slots[i] = s
     return s
 end
 
--- The row sits next to the badge that is visible: below the target badge or the screen badge, above the nameplate
--- badge (below it would cover the nameplate). Without any badge it goes under the target frame.
--- It is never put above the target frame: that is at the top edge of the screen on many layouts.
-function UI.PlaceRow()
+-- Where the main row goes. Never above the target frame: that is at the top edge of the screen on many layouts.
+local function PlaceMain(row)
+    local db = BFA.db
     row:ClearAllPoints()
-    local anchorName
+    local what
     if badges.target:IsShown() then
-        row:SetPoint("TOPLEFT", badges.target, "BOTTOMLEFT", 0, -3)
-        anchorName = "target badge"
-    elseif badges.plate:IsShown() then
-        row:SetPoint("BOTTOMLEFT", badges.plate, "TOPLEFT", 0, 3)
-        anchorName = "plate badge"
+        row:SetPoint("TOPLEFT", badges.target, "BOTTOMLEFT", db.rowX, db.rowY)
+        what = "target badge"
     elseif badges.screen:IsShown() then
-        row:SetPoint("TOPLEFT", badges.screen, "BOTTOMLEFT", 0, -3)
-        anchorName = "screen badge"
+        row:SetPoint("TOPLEFT", badges.screen, "BOTTOMLEFT", db.rowX, db.rowY)
+        what = "screen badge"
     elseif TargetFrame and TargetFrame:IsShown() then
-        row:SetPoint("TOPLEFT", TargetFrame, "BOTTOMRIGHT", -40, 30)
-        anchorName = "target frame"
+        row:SetPoint("TOPLEFT", TargetFrame, "BOTTOMRIGHT", -40 + db.rowX, 30)
+        what = "target frame"
     else
-        local p = BFA.db.point
-        row:SetPoint("TOP", UIParent, p[3], p[4], p[5] - 40)
-        anchorName = "screen position"
+        return nil
     end
-    row:SetScale(BFA.db.scale)
-    -- Log where the row really is, so a position problem can be verified from the log.
-    local sig = anchorName .. " left=" .. tostring(row:GetLeft()) .. " bottom=" .. tostring(row:GetBottom()) ..
-        " screen=" .. tostring(UIParent:GetWidth()) .. "x" .. tostring(UIParent:GetHeight())
-    if sig ~= UI.lastRowSig then
-        UI.lastRowSig = sig
-        BFA:Log("UI", "indicator row: " .. sig)
-    end
+    return what
 end
 
--- items: array of { state = "ok"|"warn"|"bad", icon = texture, text = string|nil, tip = string|nil }
-function UI.ShowIndicators(items)
-    if #items == 0 then
-        row:Hide()
-        return
-    end
-    UI.PlaceRow()
+local function PlacePlate(row)
+    local db = BFA.db
+    if not badges.plate:IsShown() then return nil end
+    row:ClearAllPoints()
+    row:SetPoint("BOTTOMLEFT", badges.plate, "TOPLEFT", db.rowX, 3)
+    return "plate badge"
+end
+
+local function Fill(row, items)
+    if #items == 0 then row:Hide() return end
+    row:SetScale(BFA.db.scale)
     for i, item in ipairs(items) do
-        local s = Slot(i)
+        local s = Slot(row, i)
         local c = COLORS[item.state] or COLORS.ok
         s:ClearAllPoints()
-        s:SetPoint("LEFT", row, "LEFT", (i - 1) * 26, 0)
-        s.border:SetColorTexture(c[1], c[2], c[3], 1)
+        s:SetPoint("LEFT", row, "LEFT", (i - 1) * STEP, 0)
+        s.ring:SetColorTexture(c[1], c[2], c[3], 1)
         s.icon:SetTexture(item.icon or FALLBACK_ICON)
         s.text:SetText(item.text or "")
         s.text:SetTextColor(c[1], c[2], c[3])
         s.tip = item.tip
         s:Show()
     end
-    for i = #items + 1, #slots do slots[i]:Hide() end
-    row:SetWidth(#items * 26)
+    for i = #items + 1, #row.slots do row.slots[i]:Hide() end
+    row:SetWidth(#items * STEP)
     row:Show()
 end
 
-function UI.HideIndicators() row:Hide() end
+-- items: array of { state = "ok"|"warn"|"bad", icon = texture, text = string|nil, tip = string|nil, plate = bool|nil }
+function UI.ShowIndicators(items)
+    local db = BFA.db
+    local plateOnly = (db.anchor == "nameplate")
+    local plateItems = {}
+    for _, item in ipairs(items) do
+        if plateOnly or item.plate then plateItems[#plateItems + 1] = item end
+    end
+
+    local mainWhere = (not plateOnly) and #items > 0 and PlaceMain(rows.main) or nil
+    Fill(rows.main, mainWhere and items or {})
+
+    local plateWhere = #plateItems > 0 and PlacePlate(rows.plate) or nil
+    Fill(rows.plate, plateWhere and plateItems or {})
+
+    -- Log where the rows really are, so a position problem can be verified from the log.
+    local function rect(row) return tostring(row:GetLeft()) .. "," .. tostring(row:GetBottom()) end
+    local sig = string.format("main=%s(%s) plate=%s(%s) screen=%sx%s offset=%s,%s", tostring(mainWhere),
+        mainWhere and rect(rows.main) or "-", tostring(plateWhere), plateWhere and rect(rows.plate) or "-",
+        tostring(UIParent:GetWidth()), tostring(UIParent:GetHeight()), tostring(db.rowX), tostring(db.rowY))
+    if sig ~= UI.lastRowSig then
+        UI.lastRowSig = sig
+        BFA:Log("UI", "indicator rows: " .. sig)
+    end
+end
+
+function UI.HideIndicators()
+    rows.main:Hide()
+    rows.plate:Hide()
+end
 
 ---------------------------------------------------------------------------
 -- Floating text
