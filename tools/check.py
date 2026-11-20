@@ -25,6 +25,8 @@ for addon in addons():
             total += 1
 print('PASS TOC rules and Lua 5.1 compilation: %d addons, %d lua files' % (len(addons()), total))
 
-test = ROOT / 'tools' / 'range_test.lua'
-if test.is_file():
-    sys.exit(subprocess.run([lua, str(test), str(ROOT)]).returncode)
+status = 0
+for test in sorted((ROOT / 'tools').glob('*_test.lua')):
+    print('-- ' + test.name)
+    status |= subprocess.run([lua, str(test), str(ROOT)]).returncode
+sys.exit(status)

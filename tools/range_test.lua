@@ -133,7 +133,9 @@ BFA:RegisterModule("Test", { apiVersion = 1, indicators = {
     { id = "b", order = 20, Update = function() return "ok" end },
     { id = "a", order = 10, Update = function() return nil end },
 } })
-check(BFA.indicators[1].def.id == "a" and BFA.indicators[2].def.id == "b", "indicators sorted by order")
+local pos = {}
+for i, e in ipairs(BFA.indicators) do pos[e.module .. "." .. e.def.id] = i end
+check(pos["Test.a"] and pos["Test.b"] and pos["Test.a"] < pos["Test.b"], "indicators sorted by order")
 
 print(haveOld and "(parity with 0.1.16 checked)" or "(old target-ranger not found, parity skipped)")
 if fails > 0 then print(fails .. " FAILED") os.exit(1) end
