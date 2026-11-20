@@ -81,6 +81,22 @@ local function FindAura(unit, filter, wanted)
     return true
 end
 
+-- Diagnostics: what the client says about secrecy (logged when it changes, nothing here drives the display).
+local function Secrecy()
+    local C = C_Secrets
+    if type(C) ~= "table" then return "no C_Secrets" end
+    local function call(name, ...)
+        local f = C[name]
+        if type(f) ~= "function" then return "n/a" end
+        local ok, r = pcall(f, ...)
+        return ok and tostring(r) or "err"
+    end
+    return string.format("restrictions=%s aurasSecret=%s markAura=%s hawkAura=%s auraIndex=%s petHealthMax=%s identity=%s",
+        call("HasSecretRestrictions"), call("ShouldAurasBeSecret"), call("GetSpellAuraSecrecy", 1130),
+        call("GetSpellAuraSecrecy", 13165), call("ShouldUnitAuraIndexBeSecret", "target", 1),
+        call("ShouldUnitHealthMaxBeSecret", "pet"), call("ShouldUnitIdentityBeSecret", "target"))
+end
+
 local function Short(n)
     if n >= 1000 then return string.format("%.1fk", n / 1000) end
     return tostring(n)
@@ -227,6 +243,7 @@ local function MarkUpdate(unit)
     end
 
     -- Auras are hidden (combat): fall back to what was seen or cast for this very target.
+    LogChange("secrecy", Secrecy())
     local t = guid and trackedMarks[guid]
     if not t then return nil end
     if t.marked and t.expires and now >= t.expires then
@@ -255,6 +272,7 @@ local function AspectUpdate()
         return "warn", hawkIcon, "!", "No aspect active"
     end
     -- hidden in combat: what we last saw or cast
+    LogChange("secrecy", Secrecy())
     if trackedAspect then
         LogChange("aspect", "tracked " .. trackedAspect.name .. " src=" .. trackedAspect.src)
         return "ok", trackedAspect.icon, nil, trackedAspect.name .. " (tracked)"
@@ -279,6 +297,15 @@ local function PetUpdate()
     if UnitIsDead("pet") then
         LogChange("pet", "dead")
         return "bad", icon, "X", "Pet is dead"
+    end
+    do
+        local function secret(v) return issecretvalue and issecretvalue(v) and "secret" or "readable" end
+        local okH, h = pcall(UnitHealth, "pet")
+        local okM, m = pcall(UnitHealthMax, "pet")
+        local okP, p = pcall(function() return GetPetHappiness and GetPetHappiness() end)
+        LogChange("pet-api", string.format("health ok=%s %s type=%s | max ok=%s %s | happiness ok=%s type=%s value=%s | %s",
+            tostring(okH), okH and secret(h) or "-", type(h), tostring(okM), okM and secret(m) or "-", tostring(okP),
+            type(p), okP and not (issecretvalue and issecretvalue(p)) and tostring(p) or "-", Secrecy()))
     end
     local _, happy = Try(function() return GetPetHappiness and GetPetHappiness() end)
     -- health is secret during combat (arithmetic on it raises an error): then no percentage, but the pet is alive
