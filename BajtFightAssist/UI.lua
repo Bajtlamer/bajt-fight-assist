@@ -266,14 +266,15 @@ float:SetScript("OnUpdate", function(self, dt)
 end)
 
 local lastFloat = 0
-function UI.Float(state)
+function UI.Float(state, label)
     if not BFA.db.floatingText then return end
     local now = GetTime()
     if now - lastFloat < 0.6 then return end
     lastFloat = now
     local c = COLORS[state]
-    BFA:Log("UI", "FLOAT " .. BFA.LABELS[state])
-    float.text:SetText(BFA.LABELS[state])
+    label = label or BFA.LABELS[state]
+    BFA:Log("UI", "FLOAT " .. label)
+    float.text:SetText(label)
     float.text:SetTextColor(c[1], c[2], c[3])
     floatElapsed = 0
     float:SetAlpha(1)

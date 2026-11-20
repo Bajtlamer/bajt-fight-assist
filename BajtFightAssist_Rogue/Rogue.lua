@@ -1,5 +1,5 @@
 -- Bajt's Fight Assist: Rogue module, exploration build.
--- Nothing is shown yet. The module logs what the client reports for the things a Rogue wants to watch
+-- The range badge uses Throw. The module also logs what the client reports for the things a Rogue wants to watch
 -- (range probes, poisons, Sap, Pick Pocket, combo points) so that reliable sources can be chosen from the log.
 local BFA = _G.BajtFightAssist
 
@@ -53,8 +53,12 @@ end
 
 BFA:RegisterModule("Rogue", {
     apiVersion = 1,
-    -- No ranged probes: the state stays in fight range mode (melee distance by interact checks and items).
-    ranged = {},
+    -- Throw is the ranged attack: the badge says THROW IN RANGE while it reaches the target, MELEE ATTACK when the target
+    -- is closer than its minimum range and OUT OF RANGE beyond it. Range 5-30 yd is the fallback when the client gives none
+    -- (the minimum is not confirmed: the log shows Throw "in" only from about 8 yd and "out" at 30-35 yd).
+    ranged = {
+        { id = 2764, primary = true, fmin = 5, fmax = 30, label = "THROW IN RANGE" },
+    },
     -- Exploration probes: logged as x:<spell> in every range sample, never used for the state.
     explore = {
         { id = 1752 }, -- Sinister Strike (melee)
@@ -65,7 +69,6 @@ BFA:RegisterModule("Rogue", {
         { id = 703 },  -- Garrote (melee)
         { id = 921 },  -- Pick Pocket
         { id = 6770 }, -- Sap
-        { id = 2764 }, -- Throw
         { id = 2480 }, -- Shoot Bow
         { id = 7918 }, -- Shoot Gun
         { id = 7919 }, -- Shoot Crossbow

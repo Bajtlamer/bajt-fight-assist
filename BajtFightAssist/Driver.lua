@@ -150,7 +150,7 @@ driver:SetScript("OnUpdate", function(_, dt)
             if pendingState == state then
                 pendingTicks = pendingTicks + 1
                 if pendingTicks >= 2 then
-                    if lastState ~= nil then UI.Float(state) end
+                    if lastState ~= nil then UI.Float(state, sub) end
                     lastState = state
                 end
             else

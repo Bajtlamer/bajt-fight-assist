@@ -99,7 +99,7 @@ function R.Rebuild()
                 if maxR then
                     local c = {
                         name = name, min = minR, max = maxR, apiMin = apiMin, apiMax = apiMax,
-                        melee = melee, icon = icon, module = modName,
+                        melee = melee, icon = icon, module = modName, label = p.label,
                         primary = p.primary and not seenPrimary or false,
                     }
                     if c.primary then seenPrimary = true end
@@ -189,7 +189,7 @@ function R.Measure(unit)
     local pmax = primary and primary.max or 0
     if primaryIn then
         local top = hi or pmax
-        return "IN", BFA.LABELS.IN, bracket(lo < top and lo or 0, top), true
+        return "IN", (primary and primary.label) or BFA.LABELS.IN, bracket(lo < top and lo or 0, top), true
     end
     -- Primary attack is out of range, yet a positive probe puts the target inside its maximum range:
     -- the only way both are true is that the target is closer than the attack's minimum range.

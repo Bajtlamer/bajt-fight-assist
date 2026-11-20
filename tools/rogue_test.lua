@@ -35,6 +35,9 @@ local fails = 0
 local function check(cond, text) print((cond and "PASS " or "FAIL ") .. text) if not cond then fails = fails + 1 end end
 
 check(BFA.modules.Rogue ~= nil, "Rogue module registered")
+local throw = BFA.modules.Rogue.ranged[1]
+check(throw and throw.id == 2764 and throw.primary, "Throw is the primary ranged attack")
+check(throw and throw.label == "THROW IN RANGE", "the badge says THROW IN RANGE while Throw reaches the target")
 local diag = BFA.indicators[1].def.Update
 for _, m in ipairs({ "normal", "secret", "error" }) do
     mode = m

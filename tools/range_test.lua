@@ -19,7 +19,7 @@ GetTime = os.clock
 local W = { known = {}, spells = {}, interact = {}, items = {} }
 local SPELLDB = {
     [75] = { "Auto Shot", 8, 35 }, [3044] = { "Arcane Shot", 8, 35 }, [1978] = { "Serpent Sting", 8, 35 },
-    [5116] = { "Concussive Shot", 8, 35 }, [1130] = { "Hunter's Mark", 0, 100 }, [20736] = { "Distracting Shot", 8, 35 },
+    [5116] = { "Concussive Shot", 8, 35 }, [2764] = { "Throw", 0, 0 }, [1130] = { "Hunter's Mark", 0, 100 }, [20736] = { "Distracting Shot", 8, 35 },
 }
 function GetSpellInfo(id)
     local s = SPELLDB[id]
@@ -44,6 +44,7 @@ load(root .. "/BajtFightAssist/Core.lua", "BajtFightAssist", BFA)
 load(root .. "/BajtFightAssist/Range.lua", "BajtFightAssist", BFA)
 BFA.OnEvent("ADDON_LOADED", "BajtFightAssist")
 load(root .. "/BajtFightAssist_Hunter/Hunter.lua", "BajtFightAssist_Hunter", {})
+load(root .. "/BajtFightAssist_Rogue/Rogue.lua", "BajtFightAssist_Rogue", {})
 
 local haveOld = io.open(oldPath, "r") ~= nil
 if haveOld then load(oldPath) end
@@ -84,6 +85,13 @@ local scenarios = {
         { "CLOSE", "MELEE ATTACK", "<= 8 yd", true } },
     { "hunter contradiction", hunter(true, true, { [3] = false, [2] = false, [4] = true },
         { [835] = false, [7734] = false, [18904] = true }), {} },
+    -- Rogue: Throw is the ranged attack and the badge says so.
+    { "rogue throw in range", { known = { 2764 }, spells = { Throw = true }, interact = NONE, items = items(true) },
+        { "IN", "THROW IN RANGE", "5-30 yd", true }, true },
+    { "rogue too close for Throw", { known = { 2764 }, spells = { Throw = false }, interact = ALL, items = items(true) },
+        { "CLOSE", "MELEE ATTACK", "<= 5 yd", true }, true },
+    { "rogue far", { known = { 2764 }, spells = { Throw = false }, interact = NONE, items = items(false) },
+        { "FAR", "OUT OF RANGE", "> 35 yd", true }, true },
     { "no ranged, melee distance", { known = {}, spells = {}, interact = ALL, items = items(true) },
         { "IN", "FIGHT RANGE", "<= 10 yd", false } },
     { "no ranged, far", { known = {}, spells = {}, interact = NONE, items = items(false) },
