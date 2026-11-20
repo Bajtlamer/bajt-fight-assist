@@ -84,6 +84,9 @@ NOW = NOW + 80
 st, icon, text = full("poisonMain"); check(st == "bad" and text == "!", "secret values: expired on our clock reads bad")
 mode = "normal"
 
+check(byId.combo.onPlate == true, "combo points are also shown next to the nameplate")
+check(not byId.poisonMain.onPlate and not byId.poisonOff.onPlate, "poison timers stay out of the nameplate")
+
 -- Combo points ----------------------------------------------------------------------------------
 W.combo = 3
 st, icon, text = full("combo"); check(st == "ok" and text == "3", "3 combo points: ok, number 3")
