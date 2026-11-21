@@ -35,6 +35,12 @@ def version(addon):
 def files(addon):
     """Runtime files: the TOC and every file it lists, checked for existence."""
     result = [toc(addon)]
+    icon = meta(addon).get('IconTexture')
+    if icon:
+        path = (addon / 'Artwork' / (icon.replace('\\', '/').rsplit('/', 1)[-1] + '.tga')).resolve()
+        if not path.is_file():
+            raise ValueError(addon.name + ': missing icon ' + icon)
+        result.append(path)
     for line in toc(addon).read_text().splitlines():
         line = line.strip()
         if line and not line.startswith('#'):

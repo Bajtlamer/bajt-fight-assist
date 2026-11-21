@@ -26,6 +26,8 @@ for addon in addons():
             subprocess.run([lua, '-e', "assert(loadfile(os.getenv('BFA_FILE')))"], check=True,
                            env={**os.environ, 'BFA_FILE': str(path)}, stdin=subprocess.DEVNULL)
             total += 1
+subprocess.run([sys.executable, str(ROOT / 'tools' / 'generate_icons.py'), '--check'], check=True)
+print('PASS addon icons are current')
 print('PASS TOC rules and Lua 5.1 compilation: %d addons, %d lua files' % (len(addons()), total))
 
 status = 0

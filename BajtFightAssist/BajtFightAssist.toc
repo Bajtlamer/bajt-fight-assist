@@ -1,7 +1,8 @@
 ## Interface: 16001
 ## Title: Bajt's Fight Assist
 ## Notes: Core of Bajt's Fight Assist: range state and class indicators next to your target. Install together with a class module.
-## Version: 0.4.5
+## Version: 0.4.6
+## IconTexture: Interface\AddOns\BajtFightAssist\Artwork\AddonIcon
 ## Author: Radek Roza
 ## SavedVariables: BajtFightAssistDB
 ## X-BFA-API: 1

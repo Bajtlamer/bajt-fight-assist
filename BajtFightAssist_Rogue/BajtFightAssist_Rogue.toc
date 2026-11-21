@@ -1,7 +1,8 @@
 ## Interface: 16001
 ## Title: Bajt's Fight Assist: Rogue
 ## Notes: Rogue module for Bajt's Fight Assist: THROW IN RANGE badge, poison timers, Backstab readiness, combo points, and a diagnostic log.
-## Version: 0.3.3
+## Version: 0.3.4
+## IconTexture: Interface\AddOns\BajtFightAssist_Rogue\Artwork\AddonIcon
 ## Author: Radek Roza
 ## Dependencies: BajtFightAssist
 ## LoadOnDemand: 1
