@@ -106,19 +106,12 @@ W.rangeState = nil
 st = full("backstab"); check(st == nil, "range unknown: hidden")
 W.rangeState = "CLOSE"
 W.usable, W.noPower = false, true
-st, icon, text = full("backstab"); check(st == "warn" and text == "E", "not enough energy: warn, E")
+st = full("backstab"); check(st == nil, "not enough energy: hidden, Backstab cannot be used")
 W.usable, W.noPower = false, false
 st = full("backstab"); check(st == nil, "not usable for another reason: hidden")
 W.usable, W.noPower = true, false
-module.OnEvent("UI_ERROR_MESSAGE", 50, "You must be behind your target.")
-st, icon, text = full("backstab"); check(st == "warn" and text == "BEHIND", "the client said the target must be hit from behind: warn, BEHIND")
-NOW = NOW + 5
-st, icon, text = full("backstab"); check(st == "ok", "the note about the failed attempt fades after a few seconds")
-module.OnEvent("UI_ERROR_MESSAGE", 50, "You must be behind your target.")
-module.OnEvent("UNIT_SPELLCAST_SUCCEEDED", "player", "guid", 2589)
-st = full("backstab"); check(st == "ok", "a successful Backstab clears the note")
-module.OnEvent("UI_ERROR_MESSAGE", 50, "Out of range.")
-st = full("backstab"); check(st == "ok", "other error messages do not matter")
+st, icon, text = full("backstab"); check(st == "ok" and text == "BS", "usable again: green BS")
+check(module.OnEvent == nil, "no guessing about the position behind the target")
 
 -- Combo points ----------------------------------------------------------------------------------
 local expected = { [1] = "bad", [2] = "warn", [3] = "yellow", [4] = "lime", [5] = "ok" }
