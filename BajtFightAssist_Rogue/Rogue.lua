@@ -185,9 +185,9 @@ BFA:RegisterModule("Rogue", {
         { id = 7919 }, -- Shoot Crossbow
     },
     indicators = {
-        { id = "poisonMain", title = "Main hand poison", order = 10, Update = function() return PoisonUpdate(MAIN_HAND) end },
-        { id = "poisonOff", title = "Off hand poison", order = 20, Update = function() return PoisonUpdate(OFF_HAND) end },
-        { id = "backstab", title = "Backstab", order = 25, Update = BackstabUpdate },
+        { id = "poisonMain", onPlate = true, title = "Main hand poison", order = 10, Update = function() return PoisonUpdate(MAIN_HAND) end },
+        { id = "poisonOff", onPlate = true, title = "Off hand poison", order = 20, Update = function() return PoisonUpdate(OFF_HAND) end },
+        { id = "backstab", onPlate = true, title = "Backstab", order = 25, Update = BackstabUpdate },
         { id = "combo", title = "Combo points", order = 30, onPlate = true, Update = ComboUpdate },
         { id = "diag", title = "Diagnostics (hidden)", order = 1000, Update = Diagnose },
     },

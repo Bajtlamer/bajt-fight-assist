@@ -86,7 +86,8 @@ st, icon, text = full("poisonMain"); check(st == "bad" and text == "!", "secret 
 mode = "normal"
 
 check(byId.combo.onPlate == true, "combo points are also shown next to the nameplate")
-check(not byId.poisonMain.onPlate and not byId.poisonOff.onPlate, "poison timers stay out of the nameplate")
+check(byId.poisonMain.onPlate == true and byId.poisonOff.onPlate == true, "poison timers are also shown next to the nameplate")
+check(byId.backstab.onPlate == true, "Backstab readiness is also shown next to the nameplate")
 
 BFA.Range.Measure = function() return W.rangeState end        -- the range engine, answered by the test
 -- Backstab -----------------------------------------------------------------------------------------
