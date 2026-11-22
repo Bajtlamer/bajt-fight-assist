@@ -6,27 +6,41 @@ BFA.UI = UI
 local FONT = "Fonts\\FRIZQT__.TTF"
 local FALLBACK_ICON = "Interface\\Icons\\Ability_Marksmanship"
 local COLORS, SHORT = BFA.COLORS, BFA.SHORT
+local BADGE_MIN_WIDTH, BADGE_HEIGHT = 86, 34
+local BADGE_ICON_SIZE, BADGE_ICON_LEFT, BADGE_TEXT_GAP, BADGE_TEXT_RIGHT = 28, 3, 4, 7
+local BADGE_TITLE_SIZE, BADGE_SUB_SIZE = 16, 9
+
+-- Measure on an independent frame so nameplate restrictions do not affect text sizing.
+local measureFrame = CreateFrame("Frame", nil, UIParent)
+measureFrame:Hide()
+local measureText = measureFrame:CreateFontString(nil, "OVERLAY")
+
+local function BadgeTextWidth(text, size)
+    measureText:SetFont(FONT, size, "OUTLINE")
+    measureText:SetText(text)
+    return measureText:GetStringWidth()
+end
 
 ---------------------------------------------------------------------------
 -- Badge
 ---------------------------------------------------------------------------
 local function CreateBadge(name)
     local f = CreateFrame("Frame", name, UIParent)
-    f:SetSize(86, 34)
+    f:SetSize(BADGE_MIN_WIDTH, BADGE_HEIGHT)
     f:SetFrameStrata("HIGH")
     f.bg = f:CreateTexture(nil, "BACKGROUND")
     f.bg:SetAllPoints()
     f.bg:SetColorTexture(0, 0, 0, 0.55)
     f.icon = f:CreateTexture(nil, "ARTWORK")
-    f.icon:SetSize(28, 28)
-    f.icon:SetPoint("LEFT", 3, 0)
+    f.icon:SetSize(BADGE_ICON_SIZE, BADGE_ICON_SIZE)
+    f.icon:SetPoint("LEFT", BADGE_ICON_LEFT, 0)
     f.icon:SetTexture(FALLBACK_ICON)
     f.number = f:CreateFontString(nil, "OVERLAY")
-    f.number:SetFont(FONT, 16, "OUTLINE")
-    f.number:SetPoint("TOPLEFT", f.icon, "TOPRIGHT", 4, 0)
+    f.number:SetFont(FONT, BADGE_TITLE_SIZE, "OUTLINE")
+    f.number:SetPoint("TOPLEFT", f.icon, "TOPRIGHT", BADGE_TEXT_GAP, 0)
     f.sub = f:CreateFontString(nil, "OVERLAY")
-    f.sub:SetFont(FONT, 9, "OUTLINE")
-    f.sub:SetPoint("BOTTOMLEFT", f.icon, "BOTTOMRIGHT", 4, 0)
+    f.sub:SetFont(FONT, BADGE_SUB_SIZE, "OUTLINE")
+    f.sub:SetPoint("BOTTOMLEFT", f.icon, "BOTTOMRIGHT", BADGE_TEXT_GAP, 0)
     f:Hide()
     return f
 end
@@ -60,7 +74,14 @@ end
 
 function UI.ApplyBadge(f, state, sub, iconTex, tone)
     local c = COLORS[tone or state]
-    f.number:SetText(SHORT[state])
+    local title = SHORT[state]
+    if f.badgeTitle ~= title or f.badgeSub ~= sub then
+        local textWidth = math.max(BadgeTextWidth(title, BADGE_TITLE_SIZE), BadgeTextWidth(sub, BADGE_SUB_SIZE))
+        local width = BADGE_ICON_LEFT + BADGE_ICON_SIZE + BADGE_TEXT_GAP + textWidth + BADGE_TEXT_RIGHT
+        f:SetWidth(math.max(BADGE_MIN_WIDTH, math.ceil(width)))
+        f.badgeTitle, f.badgeSub = title, sub
+    end
+    f.number:SetText(title)
     f.number:SetTextColor(c[1], c[2], c[3])
     f.sub:SetText(sub)
     f.sub:SetTextColor(c[1], c[2], c[3])

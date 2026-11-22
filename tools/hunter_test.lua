@@ -9,6 +9,9 @@ mt.__index = function(_, k)
     if RESTRICTED and (k == "GetLeft" or k == "GetBottom") then
         return function() error("Action[FrameMeasurement] failed because[Can't measure restricted regions]") end
     end
+    if k == "SetText" then return function(self, value) self.text = value end end
+    if k == "GetStringWidth" then return function(self) return #(rawget(self, "text") or "") * 6 end end
+    if k == "SetWidth" then return function(self, width) self.width = width end end
     return function() return stub() end
 end
 function CreateFrame() return stub() end
@@ -175,7 +178,13 @@ local okUI, errUI = pcall(function()
     BFA.UI.ShowIndicators({ { state = "ok", icon = "i", text = "1.2k", tip = "t", plate = true }, { state = "warn" }, { state = "bad", text = "X" } })
     BFA.UI.ShowIndicators({})
     BFA.UI.HideIndicators()
-    BFA.UI.ApplyBadge(BFA.UI.badges.target, "CLOSE", "MELEE ATTACK", "icon")
+    local badge = BFA.UI.badges.plate
+    BFA.UI.ApplyBadge(badge, "IN", "THROW IN RANGE", "icon")
+    assert(badge.width >= 35 + #"THROW IN RANGE" * 6, "Rogue notes must fit the nameplate background")
+    BFA.UI.ApplyBadge(badge, "CLOSE", "MELEE ATTACK", "icon")
+    assert(badge.width >= 35 + #"MELEE ATTACK" * 6, "Hunter melee notes must fit the nameplate background")
+    BFA.UI.ApplyBadge(badge, "IN", "IN RANGE", "icon")
+    assert(badge.width < 35 + #"THROW IN RANGE" * 6, "the badge should shrink when the label gets shorter")
     BFA.UI.Float("FAR")
 end)
 print((okUI and "PASS " or "FAIL ") .. "UI smoke test" .. (okUI and "" or (": " .. tostring(errUI))))

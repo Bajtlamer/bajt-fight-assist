@@ -1,5 +1,9 @@
 # Changelog
 
+## Core 0.4.7
+
+- Size the range badge background to fit both lines of text for Rogue and Hunter.
+
 ## First release (Core 0.4.6, Hunter 0.4.5, Rogue 0.3.4)
 
 Bajt's Fight Assist for WoW Forever (interface 16001): a core addon plus small class modules that show fight-relevant state next to your target and its nameplate.
