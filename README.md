@@ -10,4 +10,6 @@ Rules: show only what is known to be true and current (unknown is hidden), and w
 
 Tools (`tools/`): `check.py` (TOC rules, Lua compilation, offline range tests), `package.py` (zip per addon), `install.py --addons-dir DIR [--apply]`, `generate_icons.py [--check]` (addon list icons), `curseforge_upload.py plan|upload` (CurseForge files of the three projects; token from `../curseforge/.env`).
 Release notes: `CHANGELOG.md`.
+
+GitHub releases and CurseForge packages are the same thing: a release `v<version>` exists exactly when a package was published on CurseForge, with the same ZIPs. Changes and fixes between two releases (tools, documentation, repairs that are not yet packaged) are marked with plain tags that are not releases, for example `tools-2026-11-23`.
 Design and plan: see `plan-bajt-fight-assist.md` in the original `target-ranger` repository.
